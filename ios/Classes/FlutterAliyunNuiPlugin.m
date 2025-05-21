@@ -1,13 +1,12 @@
 #import "FlutterAliyunNuiPlugin.h"
 #import "FlutterAliyunNui.h"
 
-
 @implementation FlutterAliyunNuiPlugin {
     FlutterMethodChannel *_channel;
-//    TTSUtil *_ttsUtil;
-    FlutterAliyunNui *_nui; 
+    FlutterAliyunNui *_nui;
 }
 
+// 懒加载获取 FlutterAliyunNui 实例，确保每次都能拿到
 - (FlutterAliyunNui *)nui {
     if (!_nui) {
         _nui = [[FlutterAliyunNui alloc] initWithChannel:_channel];
@@ -15,46 +14,52 @@
     return _nui;
 }
 
+// 插件注册入口，初始化 MethodChannel 并绑定插件实例
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
     FlutterMethodChannel* channel = [FlutterMethodChannel
-            methodChannelWithName:@"flutter_aliyun_nui"
-                  binaryMessenger:[registrar messenger]];
+        methodChannelWithName:@"flutter_aliyun_nui"
+              binaryMessenger:[registrar messenger]];
     FlutterAliyunNuiPlugin* instance = [[FlutterAliyunNuiPlugin alloc] init];
     instance->_channel = channel;
     [registrar addMethodCallDelegate:instance channel:channel];
 }
 
-
-
+// 处理 Dart 层调用的所有方法
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
-    if ([@"init" isEqualToString:call.method]) {
+    if ([@"initRecognize" isEqualToString:call.method]) {
+        // 初始化识别
         result([self.nui nuiSdkInit:call.arguments]);
     } else if ([@"startRecognize" isEqualToString:call.method]) {
+        // 开始识别
         NSString *token = [call.arguments objectForKey:@"token"];
         [self.nui startRecognizeWithToken:token result:result];
     } else if ([@"stopRecognize" isEqualToString:call.method]) {
-        [self.nui  stopRecognize];
+        // 停止识别
+        [self.nui stopRecognize];
         result(nil);
     } else if ([@"release" isEqualToString:call.method]) {
-        [self.nui.nui nui_release];
+        // 释放资源
+        [self.nui nuiRelase];
         result(nil);
-    }else if ([@"playText" isEqualToString:call.method]) {
-//        NSString *text = call.arguments[@"Text"];
-//        if (text != NULL && text.length > 0) {
-//            [_ttsUtil playText:text];
-//        } else if (_ttsUtil == NULL) {
-//            _ttsUtil = [[TTSUtil alloc] initWithChannel:_channel utils:_utils audioController:_audioController];
-//        } 
-    } else if ([@"pauseTTS" isEqualToString:call.method]) {
-         
-    } else if ([@"resumeTTS" isEqualToString:call.method]) {
-         
-    } else if ([@"stopTTS" isEqualToString:call.method]) {
-         
+    } else if ([@"startStreamInputTts" isEqualToString:call.method]) {
+        // 开始流式TTS
+        [self.nui startStreamInputTts:call.arguments result:result];
+    } else if ([@"sendStreamInputTts" isEqualToString:call.method]) {
+        // 发送流式TTS文本
+        [self.nui sendStreamInputTts:call.arguments];
+        result(nil);
+    } else if ([@"stopStreamInputTts" isEqualToString:call.method]) {
+        // 正常结束流式TTS
+        [self.nui stopStreamInputTts];
+        result(nil);
+    } else if ([@"cancelStreamInputTts" isEqualToString:call.method]) {
+        // 取消流式TTS
+        [self.nui cancelStreamInputTts];
+        result(nil);
     } else {
+        // 未实现的方法
         result(FlutterMethodNotImplemented);
     }
 }
-     
 
 @end

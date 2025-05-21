@@ -6,6 +6,10 @@
 //
 
 #import "FlutterAliyunNui.h"
+#import "AudioController.h"
+#import <nuisdk/NeoNui.h>
+#import <nuisdk/StreamInputTts.h>
+#import "NuiSdkUtils.h"
 
 static BOOL save_wav = NO;
 static BOOL save_log = NO;
@@ -14,13 +18,24 @@ static NuiVadMode vad_mode = MODE_VAD;
 static NSString *debug_path = @"";
 static dispatch_queue_t sr_work_queue;
 
-static FlutterAliyunNui *myself = nil;
+static int ttsSampleRate = 16000;
 
+static FlutterAliyunNui *myself = nil;
+@interface FlutterAliyunNui ()<ConvVoiceRecorderDelegate, NeoNuiSdkDelegate,StreamInputTtsDelegate> {
+    FlutterResult _startResult;
+    NSMutableArray *text_array;
+    
+}
+@property (nonatomic, weak) FlutterMethodChannel *channel;
+@property (nonatomic, strong) NSMutableData *recordedVoiceData;
+@property (nonatomic, strong) AudioController *audioController;
+@property (nonatomic, strong) NeoNui *nui;
+@property (nonatomic, strong) NuiSdkUtils *utils;
+@property (nonatomic, strong) StreamInputTts* nuiTts;
+@end
 
 @implementation FlutterAliyunNui
-{
-    FlutterResult _startResult;
-}
+ 
 
 - (NeoNui *)nui {
     if (!_nui) {
@@ -30,6 +45,14 @@ static FlutterAliyunNui *myself = nil;
     return _nui;
 }
 
+- (StreamInputTts *)nuiTts {
+    if (!_nuiTts) {
+        _nuiTts = [StreamInputTts get_instance];
+        _nuiTts.delegate = self;
+    }
+    return _nuiTts;
+}
+
 - (instancetype)initWithChannel:(FlutterMethodChannel *)channel{
     self = [super init];
     if (self) {
@@ -37,8 +60,9 @@ static FlutterAliyunNui *myself = nil;
         _channel = channel;
         _utils = [NuiSdkUtils alloc];
         _recordedVoiceData = [NSMutableData data];
-        _audioController = [[AudioController alloc] init:only_recorder];
+        _audioController = [[AudioController alloc] init:all_open];
         _audioController.delegate = self;
+        [_audioController setPlayerSampleRate:ttsSampleRate];
     }
     return self;
 }
@@ -107,7 +131,116 @@ static FlutterAliyunNui *myself = nil;
     }
 }
 
+- (void)nuiRelase {
+    [self.nui nui_release];
+}
+
+// 开始合成
+- (void)startStreamInputTts:(NSDictionary *)args result:(FlutterResult)result{
+    if (_audioController == nil) {
+        return;
+    }
+   
+   NSMutableDictionary *ticketJsonDict = [NSMutableDictionary dictionary];
+   //获取账号访问凭证：
+   [ticketJsonDict setObject:[args objectForKey:@"app_key"] forKey:@"app_key"];
+   [ticketJsonDict setObject:[args objectForKey:@"token"] forKey:@"token"];
+   [ticketJsonDict setObject:[args objectForKey:@"device_id"] forKey:@"device_id"];
+   [ticketJsonDict setObject:[args objectForKey:@"url"] forKey:@"url"];
+
+    
+    [ticketJsonDict setObject:@"10000" forKey:@"complete_waiting_ms"];
+
+    //debug目录，当初始化SDK时的saveLog参数取值为YES时，该目录用于保存日志等调试信息
+    NSString *debug_path = [_utils createDir];
+    [ticketJsonDict setObject:debug_path forKey:@"debug_path"];
+    //过滤SDK内部日志通过回调送回到用户层
+    [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_ERROR] forKey:@"log_track_level"];
+    //设置本地存储日志文件的最大字节数, 最大将会在本地存储2个设置字节大小的日志文件
+    [ticketJsonDict setObject:@(50 * 1024 * 1024) forKey:@"max_log_file_size"];
+ 
+    
+    NSError *error;
+    NSData *ticketJsonData = [NSJSONSerialization dataWithJSONObject:ticketJsonDict options:0 error:&error];
+    NSString *ticket = [[NSString alloc] initWithData:ticketJsonData encoding:NSUTF8StringEncoding];
+ 
+
+    // 接口说明：https://help.aliyun.com/zh/isi/developer-reference/interface-description
+    NSString *voice = [args objectForKey:@"voice"];
+    NSString *format = [args objectForKey:@"format"];
+    NSInteger sample_rate = [args objectForKey:@"sample_rate"];
+    NSInteger volume = [args objectForKey:@"volume"];
+    NSInteger speech_rate = [args objectForKey:@"speech_rate"];
+    NSInteger pitch_rate = [args objectForKey:@"pitch_rate"];
+    bool enable_subtitle = [args objectForKey:@"enable_subtitle"];
+    NSString *session_id = [args objectForKey:@"session_id"];  
+    NSDictionary *paramsJsonDict = @{
+        @"voice": voice,
+        @"format": format,
+        @"sample_rate": @(sample_rate),
+        @"volume": @(volume),
+        @"speech_rate": @(speech_rate),
+        @"pitch_rate": @(pitch_rate),
+        @"enable_subtitle": @(enable_subtitle)
+    };
+    NSData *paramsJsonData = [NSJSONSerialization dataWithJSONObject:paramsJsonDict options:0 error:&error];
+    NSString *parameters = [[NSString alloc] initWithData:paramsJsonData encoding:NSUTF8StringEncoding];
+  
+    TLog(@"%@", parameters);
+    
+    int ret = [self.nuiTts startStreamInputTts:[ticket UTF8String] parameters:[parameters UTF8String] sessionId:[session_id UTF8String] logLevel:NUI_LOG_LEVEL_VERBOSE saveLog:YES];
+    NSString *retLog = [NSString stringWithFormat:@"\n开始 返回值：%d", ret];
+    TLog(@"%@", retLog);
+    result(@(ret));
+}
+
+// 流式播放
+- (void)sendStreamInputTts:(NSDictionary *)args{
+    NSString *inputContents = [args objectForKey:@"text"];
+    NSArray<NSString *> *lines = [inputContents componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    NSInteger line_num = [lines count];
+    if (line_num > 0) {
+        NSString * oneLine = [lines firstObject];
+        NSString *retLog;
+        int ret = [self.nuiTts sendStreamInputTts:[oneLine UTF8String]];
+        retLog = [NSString stringWithFormat:@"\n发送：%@\n 发送返回值：%d", oneLine, ret];
+        NSString *updatedText = @"";
+        if (line_num > 1) {
+            updatedText = [[lines subarrayWithRange:NSMakeRange(1, [lines count] - 1)] componentsJoinedByString:@"\n"];
+        }
+        TLog(@"%@", retLog);
+    }
+}
+// 停止播放
+- (void)stopStreamInputTts {
+//    int ret = [self.nuiTts stopStreamInputTts]; // 阻塞
+    int ret = [self.nuiTts asyncStopStreamInputTts]; // 非阻塞
+    NSString *retLog = [NSString stringWithFormat:@"\n停止 返回值：%d", ret];
+    TLog(@"%@", retLog);
+}
+
+// 取消
+- (void)cancelStreamInputTts{
+    int ret = [self.nuiTts cancelStreamInputTts];
+    NSString *retLog = [NSString stringWithFormat:@"\n取消 返回值：%d", ret];
+    TLog(@"%@", retLog);
+    if (_audioController != nil) {
+        [_audioController stopPlayer];
+    }
+}
+
+// 暂停播放
+- (void)pauseTts {
+    
+}
+
+// 继续播放
+- (void)resumeTts{
+    
+}
+
 #pragma mark - Voice Recorder Delegate
+// 识别
 -(void) recorderDidStart{
     TLog(@"recorderDidStart");
 }
@@ -128,6 +261,9 @@ static FlutterAliyunNui *myself = nil;
     TLog(@"recorder error ");
     [_channel invokeMethod:@"onError" arguments:@{@"errorCode": @(error.code), @"errorMessage": error.userInfo.description ?: @""}];
 }
+
+// 合成
+ 
 
 #pragma mark - Nui Listener
 -(void)onNuiEventCallback:(NuiCallbackEvent)nuiEvent
@@ -209,7 +345,7 @@ static FlutterAliyunNui *myself = nil;
     @autoreleasepool {
         @synchronized(_recordedVoiceData){
             if (_recordedVoiceData.length > 0) {
-                int recorder_len = 0;
+                NSInteger recorder_len = 0;
                 if (_recordedVoiceData.length > len)
                     recorder_len = len;
                 else
@@ -262,6 +398,52 @@ static FlutterAliyunNui *myself = nil;
 }
 
 
+#pragma stream input tts callback
+- (void)onStreamInputTtsEventCallback:(StreamInputTtsCallbackEvent)event taskId:(char*)taskid sessionId:(char*)sessionId ret_code:(int)ret_code error_msg:(char*)error_msg timestamp:(char*)timestamp all_response:(char*)all_response {
+    NSString *log = [NSString stringWithFormat:@"\n事件回调（%d）：%s", event, all_response];
+    TLog(@"%@", log);
+    
+    if (event == TTS_EVENT_SYNTHESIS_STARTED) {
+        TLog(@"onStreamInputTtsEventCallback TTS_EVENT_SYNTHESIS_STARTED");
+        if (_audioController != nil) {
+            // 合成启动，启动播放器
+            [_audioController startPlayer];
+        }
+    } else if (event == TTS_EVENT_SENTENCE_BEGIN) {
+        TLog(@"onStreamInputTtsEventCallback TTS_EVENT_SENTENCE_BEGIN");
+    } else if (event == TTS_EVENT_SENTENCE_SYNTHESIS) {
+        TLog(@"onStreamInputTtsEventCallback TTS_EVENT_SENTENCE_SYNTHESIS");
+    } else if (event == TTS_EVENT_SENTENCE_END) {
+        TLog(@"onStreamInputTtsEventCallback TTS_EVENT_SENTENCE_END");
+    } else if (event == TTS_EVENT_SYNTHESIS_COMPLETE) {
+        TLog(@"onStreamInputTtsEventCallback TTS_EVENT_SYNTHESIS_COMPLETE");
+        if (_audioController != nil) {
+            // 注意这里的event事件是指语音合成完成，而非播放完成，播放完成需要由voicePlayer对象来进行通知
+            [_audioController drain];
+            [_audioController stopPlayer];
+        }
+    } else if (event == TTS_EVENT_TASK_FAILED) {
+        TLog(@"onStreamInputTtsEventCallback TTS_EVENT_TASK_FAILED:%s", error_msg);
+        if (_audioController != nil) {
+            // 注意这里的event事件是指语音合成完成，而非播放完成，播放完成需要由voicePlayer对象来进行通知
+            [_audioController drain];
+        }
+    }
+}
+
+- (void)onStreamInputTtsDataCallback:(char*)buffer len:(int)len {
+    NSString *log = [NSString stringWithFormat:@"\n音频回调 %d bytes", len];
+    TLog(@"%@", log);
+    if (buffer != NULL && len > 0 && _audioController != nil) {
+        [_audioController write:(char*)buffer Length:(unsigned int)len];
+    }
+}
+
+-(void)onStreamInputTtsLogTrackCallback:(NuiSdkLogLevel)level
+                             logMessage:(const char *)log {
+    [_channel invokeMethod:@"onError" arguments:@{@"errorCode": @(-1), @"errorMessage": [NSString stringWithFormat:@"%s",log]}];
+    TLog(@"onStreamInputTtsLogTrackCallback log level:%d, message -> %s", level, log);
+}
 
 #pragma mark - Private methods
 -(NSString*) getErrMesgFromResponse:(const char*)response {
@@ -406,6 +588,16 @@ static FlutterAliyunNui *myself = nil;
     NSData *data = [NSJSONSerialization dataWithJSONObject:dialog_params options:NSJSONWritingPrettyPrinted error:nil];
     NSString * jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
     return jsonStr;
+}
+
+-(void)dealloc {
+    TLog(@"%s", __FUNCTION__);
+    if (_audioController != nil) {
+        [_audioController cleanPlayerBuffer];
+    }
+    if(_nui != nil) {
+        [_nui nui_release];
+    }
 }
 
 @end

@@ -7,18 +7,8 @@
 
 #import <Foundation/Foundation.h>
 #import <Flutter/Flutter.h>
-#import "AudioController.h"
-#import <nuisdk/NeoNui.h>
-#import "NuiSdkUtils.h"
 
-@interface FlutterAliyunNui : NSObject <ConvVoiceRecorderDelegate, NeoNuiSdkDelegate>
-
-@property (nonatomic, weak) FlutterMethodChannel *channel;
-@property (nonatomic, strong) NSMutableData *recordedVoiceData;
-@property (nonatomic, strong) AudioController *audioController;
-@property (nonatomic, strong) NeoNui *nui; 
-@property (nonatomic, strong) NuiSdkUtils *utils;
- 
+@interface FlutterAliyunNui : NSObject  
 
 - (instancetype)initWithChannel:(FlutterMethodChannel *)channel;
 
@@ -30,5 +20,28 @@
 
 // 停止语音识别
 - (void)stopRecognize;
+
+// 释放语音识别对象
+- (void)nuiRelase;
+
+// 开始合成
+- (void)startStreamInputTts:(NSDictionary *)args result:(FlutterResult)result;
+
+// 流式播放
+- (void)sendStreamInputTts:(NSDictionary *)args;
+
+// 停止播放
+- (void)stopStreamInputTts;
+
+// 取消
+- (void)cancelStreamInputTts;
+
+// 暂停播放
+- (void)pauseTts;
+
+// 继续播放
+- (void)resumeTts;
+
+
 
 @end
