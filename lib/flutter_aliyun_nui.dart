@@ -72,14 +72,12 @@ class FlutterAliyunNui {
   }
 
   static Future<void> startRecognize(Map<String, dynamic> params, {bool retry = false}) async {
-    if (retry) {
-      params['token'] = '6373809de80541a4a433c7fa79e37a2a';
-      await _channel.invokeMethod('startRecognize', params);
-      return;
-    }
     await _getToken();
     if (_token.isNotEmpty) {
       params['token'] = _token;
+      // if (retry) {
+      //   params['token'] = '6373809de80541a4a433c7fa79e37a2a';
+      // }
       lastStartRecognizeData = params;
       await _channel.invokeMethod('startRecognize', params);
     }
@@ -100,7 +98,6 @@ class FlutterAliyunNui {
       // if (retry) {
       //   params['token'] = '6373809de80541a4a433c7fa79e37a2a';
       // }
-      params['token'] = '6373809de80541a4a433c7fa79e37a2a';
       int ret = await _channel.invokeMethod('startStreamInputTts', params);
       if (ret != 0) {
         startStreamInputTts(params);

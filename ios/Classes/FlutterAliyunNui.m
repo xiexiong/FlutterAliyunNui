@@ -21,10 +21,8 @@ static dispatch_queue_t sr_work_queue;
 static int ttsSampleRate = 16000;
 
 static FlutterAliyunNui *myself = nil;
-@interface FlutterAliyunNui ()<ConvVoiceRecorderDelegate, NeoNuiSdkDelegate,StreamInputTtsDelegate> {
+@interface FlutterAliyunNui ()<ConvVoiceRecorderDelegate, NeoNuiSdkDelegate, StreamInputTtsDelegate> {
     FlutterResult _startResult;
-    NSMutableArray *text_array;
-    
 }
 @property (nonatomic, weak) FlutterMethodChannel *channel;
 @property (nonatomic, strong) NSMutableData *recordedVoiceData;
@@ -213,10 +211,10 @@ static FlutterAliyunNui *myself = nil;
 }
 // 停止播放
 - (void)stopStreamInputTts {
-//    int ret = [self.nuiTts stopStreamInputTts]; // 阻塞
-    int ret = [self.nuiTts asyncStopStreamInputTts]; // 非阻塞
-    NSString *retLog = [NSString stringWithFormat:@"\n停止 返回值：%d", ret];
-    TLog(@"%@", retLog);
+    // int ret = [self.nuiTts asyncStopStreamInputTts]; // 非阻塞
+   int ret = [self.nuiTts stopStreamInputTts]; // 阻塞
+   NSString *retLog = [NSString stringWithFormat:@"\n停止 返回值：%d", ret];
+   TLog(@"%@", retLog); 
 }
 
 // 取消
@@ -227,16 +225,6 @@ static FlutterAliyunNui *myself = nil;
     if (_audioController != nil) {
         [_audioController stopPlayer];
     }
-}
-
-// 暂停播放
-- (void)pauseTts {
-    
-}
-
-// 继续播放
-- (void)resumeTts{
-    
 }
 
 #pragma mark - Voice Recorder Delegate

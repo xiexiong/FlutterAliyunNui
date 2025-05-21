@@ -20,11 +20,8 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   }
 
   Future<void> _initNui() async {
-    FlutterAliyunNui.setTokenProvider(() async {
-      return '6373809de80541a4a433c7fa79e37a2as';
-    });
+    setTokenProvider();
     await FlutterAliyunNui.initRecognize(deviceId: '660668cf0c874c848fbb467603927ebd');
-
     FlutterAliyunNui.setRecognizeResultHandler((result) {
       setState(() {
         _recognizedText = result.result;
@@ -53,9 +50,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   }
 
   Future<void> startStreamInputTts() async {
-    FlutterAliyunNui.setTokenProvider(() async {
-      return '6373809de80541a4a433c7fa79e37a2as';
-    });
+    setTokenProvider();
     await FlutterAliyunNui.startStreamInputTts({
       'app_key': AliyunConfig.appKey,
       'device_id': '660668cf0c874c848fbb467603927ebd',
@@ -84,6 +79,12 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   Future<void> stopStreamInputTts() async {
     FlutterAliyunNui.stopStreamInputTts();
+  }
+
+  void setTokenProvider() {
+    FlutterAliyunNui.setTokenProvider(() async {
+      return '6373809de80541a4a433c7fa79e37a2a';
+    });
   }
 
   @override
