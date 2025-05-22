@@ -36,12 +36,4 @@
 // 取消
 - (void)cancelStreamInputTts;
 
-// 暂停播放
-- (void)pauseTts;
-
-// 继续播放
-- (void)resumeTts;
-
-
-
 @end

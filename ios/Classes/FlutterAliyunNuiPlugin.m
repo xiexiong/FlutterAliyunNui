@@ -37,7 +37,7 @@
         // 停止识别
         [self.nui stopRecognize];
         result(nil);
-    } else if ([@"release" isEqualToString:call.method]) {
+    } else if ([@"releaseRecognize" isEqualToString:call.method]) {
         // 释放资源
         [self.nui nuiRelase];
         result(nil);

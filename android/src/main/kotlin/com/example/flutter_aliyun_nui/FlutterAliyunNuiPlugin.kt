@@ -22,11 +22,8 @@ class FlutterAliyunNuiPlugin: FlutterPlugin, MethodCallHandler {
 
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
-      "init" -> {
-        val appKey = call.argument<String>("appKey")
-        val token = call.argument<String>("token")
-        val deviceId = call.argument<String>("deviceId")
-        initNui(appKey, token, deviceId, result)
+      "initRecognize" -> {
+        initNui(call.argument, result)
       }
       "startRecognize" -> {
         val params = call.arguments as Map<String, Any>
@@ -42,11 +39,11 @@ class FlutterAliyunNuiPlugin: FlutterPlugin, MethodCallHandler {
     }
   }
 
-  private fun initNui(appKey: String?, token: String?, deviceId: String?, result: Result) {
-    if (appKey == null || token == null || deviceId == null) {
-      result.error("INVALID_ARGUMENT", "appKey, token and deviceId are required", null)
-      return
-    }
+  private fun initNui( Map<String, Any> args, result: Result) {
+    val appKey = call.argument<String>("appKey")
+    val token = call.argument<String>("token")
+    val deviceId = call.argument<String>("deviceId")
+    val url = call.argument<String>("url")
 
     nuiAgent = NuiAgent.create()
     nuiAgent?.init(appKey, token, deviceId)

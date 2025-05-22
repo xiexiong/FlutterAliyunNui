@@ -23,9 +23,12 @@ A new Flutter plugin project.
   s.frameworks =  'AudioToolbox'
   s.libraries = 'c++'
   s.vendored_frameworks = 'Frameworks/nuisdk.framework'
-  
+  s.resource_bundles = {
+  'flutter_aliyun_nui_privacy' => ['Resources/PrivacyInfo.xcprivacy']
+  }
   s.info_plist = {
-      'NSMicrophoneUsageDescription' => 'App需要访问麦克风进行AI通话',
+      'NSMicrophoneUsageDescription' => 'App 需要访问麦克风进行语音识别',
+      'NSSpeechRecognitionUsageDescription' => '当您点击麦克风按钮时，我们将通过语音识别帮助您快速输入文字',
   }
   
 

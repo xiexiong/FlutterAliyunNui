@@ -34,6 +34,21 @@ static FlutterAliyunNui *myself = nil;
 
 @implementation FlutterAliyunNui
  
+- (instancetype)initWithChannel:(FlutterMethodChannel *)channel{
+    self = [super init];
+    if (self) {
+        myself = self;
+        _channel = channel;
+        _utils = [NuiSdkUtils alloc];
+        _recordedVoiceData = [NSMutableData data];
+        _audioController = [[AudioController alloc] init:all_open];
+        _audioController.delegate = self;
+        [_audioController setPlayerSampleRate:ttsSampleRate];
+    }
+    return self;
+}
+
+#pragma mark - Speech Recognize
 
 - (NeoNui *)nui {
     if (!_nui) {
@@ -49,20 +64,6 @@ static FlutterAliyunNui *myself = nil;
         _nuiTts.delegate = self;
     }
     return _nuiTts;
-}
-
-- (instancetype)initWithChannel:(FlutterMethodChannel *)channel{
-    self = [super init];
-    if (self) {
-        myself = self;
-        _channel = channel;
-        _utils = [NuiSdkUtils alloc];
-        _recordedVoiceData = [NSMutableData data];
-        _audioController = [[AudioController alloc] init:all_open];
-        _audioController.delegate = self;
-        [_audioController setPlayerSampleRate:ttsSampleRate];
-    }
-    return self;
 }
 
 // 语音识别 sdk 初始化
@@ -133,6 +134,8 @@ static FlutterAliyunNui *myself = nil;
     [self.nui nui_release];
 }
 
+#pragma mark - Stream TTS
+
 // 开始合成
 - (void)startStreamInputTts:(NSDictionary *)args result:(FlutterResult)result{
     if (_audioController == nil) {
@@ -166,12 +169,12 @@ static FlutterAliyunNui *myself = nil;
     // 接口说明：https://help.aliyun.com/zh/isi/developer-reference/interface-description
     NSString *voice = [args objectForKey:@"voice"];
     NSString *format = [args objectForKey:@"format"];
-    NSInteger sample_rate = [args objectForKey:@"sample_rate"];
-    NSInteger volume = [args objectForKey:@"volume"];
-    NSInteger speech_rate = [args objectForKey:@"speech_rate"];
-    NSInteger pitch_rate = [args objectForKey:@"pitch_rate"];
-    bool enable_subtitle = [args objectForKey:@"enable_subtitle"];
-    NSString *session_id = [args objectForKey:@"session_id"];  
+    NSInteger sample_rate = [[args objectForKey:@"sample_rate"] integerValue];
+    NSInteger volume = [[args objectForKey:@"volume"] integerValue];
+    NSInteger speech_rate = [[args objectForKey:@"speech_rate"] integerValue];
+    NSInteger pitch_rate = [[args objectForKey:@"pitch_rate"] integerValue];
+    bool enable_subtitle = [[args objectForKey:@"enable_subtitle"] integerValue];
+    NSString *session_id = [args objectForKey:@"session_id"];
     NSDictionary *paramsJsonDict = @{
         @"voice": voice,
         @"format": format,

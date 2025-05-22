@@ -11,27 +11,24 @@ export 'src/nui_controller.dart';
 
 class FlutterAliyunNui {
   static const MethodChannel _channel = MethodChannel('flutter_aliyun_nui');
-  static bool recognizeOnReady = false;
   static Future<String> Function()? _tokenProvider;
   static String _token = '';
-  static Map<String, dynamic>? lastStartRecognizeData;
-  static int retry = 0;
+  static bool recognizeOnReady = false;
 
-  static void setRecognizeResultHandler(Function(NuiRecognizeResult) handler, Function(NuiError) nuiError) {
+  static void setRecognizeResultHandler({required Function(NuiRecognizeResult) handlerResult, required Function(NuiError) handlerError}) {
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'onRecognizeResult':
-          handler(NuiRecognizeResult.fromMap(call.arguments));
-          lastStartRecognizeData = null;
+          handlerResult(NuiRecognizeResult.fromMap(call.arguments));
           break;
         case 'onError':
           final error = NuiError.fromMap(call.arguments);
-          // 240068
-          if (error.errorCode == 240068 && lastStartRecognizeData != null) {
+          // 240068 token 无效/过期 清空 token 重新启动
+          if (error.errorCode == 240068) {
             _token = '';
-            await startRecognize(lastStartRecognizeData!, retry: true);
+            await startRecognize();
           }
-          nuiError(error);
+          handlerError(error);
           break;
       }
       return null;
@@ -45,41 +42,24 @@ class FlutterAliyunNui {
 
   static Future<void> _getToken() async {
     if (_token.isNotEmpty) return;
-    _token = '';
-    while (retry < 3) {
-      assert(_tokenProvider != null, 'tokenProvider not set!!!');
-      _token = await _tokenProvider!.call();
-      if (_token.isNotEmpty) {
-        retry = 0;
-        return;
-      }
-      retry++;
-    }
+    assert(_tokenProvider != null, 'tokenProvider not set!!!');
+    _token = await _tokenProvider!.call();
   }
 
-  static Future<void> initRecognize({required String deviceId}) async {
+  static Future<void> initRecognize({required Map<String, dynamic> params}) async {
     await _getToken();
     if (_token.isNotEmpty) {
-      var initResult = await _channel.invokeMethod('initRecognize', {
-        'appKey': AliyunConfig.appKey,
-        'token': _token,
-        'deviceId': deviceId,
-        'url': AliyunConfig.url,
-      });
+      params['token'] = _token;
+      var initResult = await _channel.invokeMethod('initRecognize', params);
       recognizeOnReady = initResult == '0';
       return initResult;
     }
   }
 
-  static Future<void> startRecognize(Map<String, dynamic> params, {bool retry = false}) async {
+  static Future<void> startRecognize() async {
     await _getToken();
     if (_token.isNotEmpty) {
-      params['token'] = _token;
-      // if (retry) {
-      //   params['token'] = '6373809de80541a4a433c7fa79e37a2a';
-      // }
-      lastStartRecognizeData = params;
-      await _channel.invokeMethod('startRecognize', params);
+      await _channel.invokeMethod('startRecognize', {'token': _token});
     }
   }
 
@@ -87,8 +67,8 @@ class FlutterAliyunNui {
     await _channel.invokeMethod('stopRecognize');
   }
 
-  static Future<void> release() async {
-    await _channel.invokeMethod('release');
+  static Future<void> releaseRecognize() async {
+    await _channel.invokeMethod('releaseRecognize');
   }
 
   static Future<void> startStreamInputTts(Map<String, dynamic> params, {bool retry = false}) async {
@@ -111,13 +91,5 @@ class FlutterAliyunNui {
 
   static Future<void> stopStreamInputTts() async {
     await _channel.invokeMethod('stopStreamInputTts');
-  }
-
-  static Future<void> pauseTTS() async {
-    await _channel.invokeMethod('pauseTTS');
-  }
-
-  static Future<void> resumeTTS() async {
-    await _channel.invokeMethod('resumeTTS');
   }
 }
