@@ -20,7 +20,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  flutter_aliyun_nui: 549eda24acfbcff631154329efd4be901f2293a3
+  flutter_aliyun_nui: a0a15027f1558a4beb14ce89cf3e2971f2a0c060
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
 
 PODFILE CHECKSUM: 6e700dec67e6deac9b1c69bb14c49a2217a12d15

@@ -14,7 +14,7 @@
 static BOOL save_wav = NO;
 static BOOL save_log = NO;
 static BOOL is_stopping = NO;
-static NuiVadMode vad_mode = MODE_VAD;
+static NuiVadMode vad_mode = MODE_P2T;
 static NSString *debug_path = @"";
 static dispatch_queue_t sr_work_queue;
 
@@ -132,6 +132,10 @@ static FlutterAliyunNui *myself = nil;
 
 - (void)nuiRelase {
     [self.nui nui_release];
+    [self.nuiTts cancelStreamInputTts];
+    if (_audioController != nil) {
+        [_audioController cleanPlayerBuffer];
+    }
 }
 
 #pragma mark - Stream TTS

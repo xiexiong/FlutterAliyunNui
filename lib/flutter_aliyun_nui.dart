@@ -67,10 +67,6 @@ class FlutterAliyunNui {
     await _channel.invokeMethod('stopRecognize');
   }
 
-  static Future<void> releaseRecognize() async {
-    await _channel.invokeMethod('releaseRecognize');
-  }
-
   static Future<void> startStreamInputTts(Map<String, dynamic> params, {bool retry = false}) async {
     await _getToken();
     if (_token.isNotEmpty) {
@@ -91,5 +87,10 @@ class FlutterAliyunNui {
 
   static Future<void> stopStreamInputTts() async {
     await _channel.invokeMethod('stopStreamInputTts');
+  }
+
+  static Future<void> release() async {
+    recognizeOnReady = false;
+    await _channel.invokeMethod('release');
   }
 }

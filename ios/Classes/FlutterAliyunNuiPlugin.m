@@ -33,13 +33,15 @@
         // 开始识别
         NSString *token = [call.arguments objectForKey:@"token"];
         [self.nui startRecognizeWithToken:token result:result];
+        result(nil);
     } else if ([@"stopRecognize" isEqualToString:call.method]) {
         // 停止识别
         [self.nui stopRecognize];
         result(nil);
-    } else if ([@"releaseRecognize" isEqualToString:call.method]) {
+    } else if ([@"release" isEqualToString:call.method]) {
         // 释放资源
         [self.nui nuiRelase];
+        _nui = nil;
         result(nil);
     } else if ([@"startStreamInputTts" isEqualToString:call.method]) {
         // 开始流式TTS

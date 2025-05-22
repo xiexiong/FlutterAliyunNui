@@ -24,11 +24,9 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   Future<void> _initRecognize() async {
     _setTokenProvider();
-    await FlutterAliyunNui.initRecognize(params: {
-      'appKey': AliyunConfig.appKey,
-      'deviceId': '660668cf0c874c848fbb467603927ebd',
-      'url': AliyunConfig.url,
-    });
+    await FlutterAliyunNui.initRecognize(
+      params: {'appKey': AliyunConfig.appKey, 'deviceId': '660668cf0c874c848fbb467603927ebd', 'url': AliyunConfig.url},
+    );
     FlutterAliyunNui.setRecognizeResultHandler(
       handlerResult: (result) {
         setState(() {
@@ -108,7 +106,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   @override
   void dispose() {
-    FlutterAliyunNui.releaseRecognize();
+    FlutterAliyunNui.release();
     super.dispose();
   }
 
@@ -119,34 +117,13 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
         child: Column(
           children: [
             const SizedBox(height: 200),
-            Text(
-              _recognizedText,
-              style: const TextStyle(color: Colors.red),
-            ),
-            ElevatedButton(
-              onPressed: _initRecognize,
-              child: const Text('Init'),
-            ),
-            ElevatedButton(
-              onPressed: _startRecognition,
-              child: const Text('Start'),
-            ),
-            ElevatedButton(
-              onPressed: _stopRecognition,
-              child: const Text('Stop'),
-            ),
-            ElevatedButton(
-              onPressed: _startStreamInputTts,
-              child: const Text('startTts'),
-            ),
-            ElevatedButton(
-              onPressed: _sendStreamInputTts,
-              child: const Text('sendTts'),
-            ),
-            ElevatedButton(
-              onPressed: _stopStreamInputTts,
-              child: const Text('stopTts'),
-            ),
+            Text(_recognizedText, style: const TextStyle(color: Colors.red)),
+            ElevatedButton(onPressed: _initRecognize, child: const Text('Init')),
+            ElevatedButton(onPressed: _startRecognition, child: const Text('Start')),
+            ElevatedButton(onPressed: _stopRecognition, child: const Text('Stop')),
+            ElevatedButton(onPressed: _startStreamInputTts, child: const Text('startTts')),
+            ElevatedButton(onPressed: _sendStreamInputTts, child: const Text('sendTts')),
+            ElevatedButton(onPressed: _stopStreamInputTts, child: const Text('stopTts')),
           ],
         ),
       ),
