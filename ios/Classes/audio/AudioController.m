@@ -797,6 +797,20 @@ static OSStatus PlayCallback(
     player_state = PLAYER_STATE_DRAINING;
 }
 
+/**
+ * 是否正在播放
+ */
+-(BOOL)isPlaying {
+    return player_state == PLAYER_STATE_PLAYING;
+}
+
+/**
+ * 是否暂停播放
+ */
+-(BOOL)isPaused {
+    return player_state == PLAYER_STATE_PAUSED;
+}
+
 -(BOOL)isPlayerStopped {
     return player_state == PLAYER_STATE_STOPPED;
 }

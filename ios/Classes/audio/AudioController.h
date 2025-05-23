@@ -154,6 +154,16 @@ typedef enum AudioControlType AudioControlType;
 -(void)drain;
 
 /**
+ * 是否正在播放
+ */
+-(BOOL)isPlaying;
+
+/**
+ * 是否暂停播放
+ */
+-(BOOL)isPaused;
+
+/**
  * 是否播放已停止
  */
 -(BOOL)isPlayerStopped;

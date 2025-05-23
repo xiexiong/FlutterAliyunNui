@@ -33,6 +33,21 @@
 // 停止播放
 - (void)stopStreamInputTts;
 
+// 是否正在播放
+- (BOOL)isPlaying;
+
+// 是否已暂停播放
+- (BOOL)isPaused;
+  
+// 是否已停止播放
+- (BOOL)isStopped;
+
+// 暂停播放
+-(void)pausePlayer;
+
+// 恢复播放
+-(void)resumePlayer;
+
 // 取消
 - (void)cancelStreamInputTts;
 

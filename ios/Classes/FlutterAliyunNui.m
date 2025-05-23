@@ -23,6 +23,7 @@ static int ttsSampleRate = 16000;
 static FlutterAliyunNui *myself = nil;
 @interface FlutterAliyunNui ()<ConvVoiceRecorderDelegate, NeoNuiSdkDelegate, StreamInputTtsDelegate> {
     FlutterResult _startResult;
+    NSMutableArray *sendText;
 }
 @property (nonatomic, weak) FlutterMethodChannel *channel;
 @property (nonatomic, strong) NSMutableData *recordedVoiceData;
@@ -39,6 +40,8 @@ static FlutterAliyunNui *myself = nil;
     if (self) {
         myself = self;
         _channel = channel;
+        
+        sendText = [NSMutableArray new];
         _utils = [NuiSdkUtils alloc];
         _recordedVoiceData = [NSMutableData data];
         _audioController = [[AudioController alloc] init:all_open];
@@ -49,25 +52,15 @@ static FlutterAliyunNui *myself = nil;
 }
 
 #pragma mark - Speech Recognize
+ 
+ 
 
-- (NeoNui *)nui {
+// 语音识别 sdk 初始化
+- (NSString *)nuiSdkInit:(NSDictionary *)args {
     if (!_nui) {
         _nui = [NeoNui get_instance];
         _nui.delegate = self;
     }
-    return _nui;
-}
-
-- (StreamInputTts *)nuiTts {
-    if (!_nuiTts) {
-        _nuiTts = [StreamInputTts get_instance];
-        _nuiTts.delegate = self;
-    }
-    return _nuiTts;
-}
-
-// 语音识别 sdk 初始化
-- (NSString *)nuiSdkInit:(NSDictionary *)args {
     //请注意此处的参数配置，其中账号相关需要按照genInitParams的说明填入后才可访问服务
     NSString * initParam = [self genInitParams:args];
     
@@ -130,18 +123,15 @@ static FlutterAliyunNui *myself = nil;
     }
 }
 
-- (void)nuiRelase {
-    [self.nui nui_release];
-    [self.nuiTts cancelStreamInputTts];
-    if (_audioController != nil) {
-        [_audioController cleanPlayerBuffer];
-    }
-}
-
 #pragma mark - Stream TTS
 
 // 开始合成
 - (void)startStreamInputTts:(NSDictionary *)args result:(FlutterResult)result{
+    [sendText removeAllObjects];
+    if (!_nuiTts) {
+        _nuiTts = [StreamInputTts get_instance];
+        _nuiTts.delegate = self;
+    }
     if (_audioController == nil) {
         return;
     }
@@ -160,7 +150,7 @@ static FlutterAliyunNui *myself = nil;
     NSString *debug_path = [_utils createDir];
     [ticketJsonDict setObject:debug_path forKey:@"debug_path"];
     //过滤SDK内部日志通过回调送回到用户层
-    [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_ERROR] forKey:@"log_track_level"];
+    [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_INFO] forKey:@"log_track_level"];
     //设置本地存储日志文件的最大字节数, 最大将会在本地存储2个设置字节大小的日志文件
     [ticketJsonDict setObject:@(50 * 1024 * 1024) forKey:@"max_log_file_size"];
  
@@ -202,6 +192,7 @@ static FlutterAliyunNui *myself = nil;
 // 流式播放
 - (void)sendStreamInputTts:(NSDictionary *)args{
     NSString *inputContents = [args objectForKey:@"text"];
+    [sendText addObject:inputContents];
     NSArray<NSString *> *lines = [inputContents componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
     NSInteger line_num = [lines count];
     if (line_num > 0) {
@@ -213,13 +204,14 @@ static FlutterAliyunNui *myself = nil;
         if (line_num > 1) {
             updatedText = [[lines subarrayWithRange:NSMakeRange(1, [lines count] - 1)] componentsJoinedByString:@"\n"];
         }
-        TLog(@"%@", retLog);
+       
+        NSLog(@"发送内容：%@", inputContents);
     }
 }
 // 停止播放
 - (void)stopStreamInputTts {
-    // int ret = [self.nuiTts asyncStopStreamInputTts]; // 非阻塞
-   int ret = [self.nuiTts stopStreamInputTts]; // 阻塞
+    int ret = [self.nuiTts asyncStopStreamInputTts]; // 非阻塞
+//   int ret = [self.nuiTts stopStreamInputTts]; // 阻塞
    NSString *retLog = [NSString stringWithFormat:@"\n停止 返回值：%d", ret];
    TLog(@"%@", retLog); 
 }
@@ -231,6 +223,53 @@ static FlutterAliyunNui *myself = nil;
     TLog(@"%@", retLog);
     if (_audioController != nil) {
         [_audioController stopPlayer];
+    }
+}
+
+// 是否正在播放
+- (BOOL)isPlaying {
+    if (_audioController != nil) {
+        return [_audioController isPlaying];
+    }
+    return  false;
+}
+
+// 是否已暂停播放
+- (BOOL)isPaused {
+    if (_audioController != nil) {
+        return [_audioController isPaused];
+    }
+    return  true;
+}
+
+// 是否已停止播放
+- (BOOL)isStopped {
+    if (_audioController != nil) {
+        return [_audioController isPlayerStopped];
+    }
+    return  true;
+}
+
+// 暂停播放
+//-(void)pausePlayer {
+//    if (_audioController != nil) {
+//        [_audioController pausePlayer];
+//    }
+//}
+//
+//// 恢复播放
+//-(void)resumePlayer {
+//    if (_audioController != nil) {
+//        [_audioController resumePlayer];
+//    }
+//   
+//}
+
+- (void)nuiRelase {
+    [self.nui nui_release];
+    [self.nuiTts cancelStreamInputTts];
+    if (_audioController != nil) {
+        [_audioController cleanPlayerBuffer];
     }
 }
 
@@ -257,7 +296,17 @@ static FlutterAliyunNui *myself = nil;
     [_channel invokeMethod:@"onError" arguments:@{@"errorCode": @(error.code), @"errorMessage": error.userInfo.description ?: @""}];
 }
 
-// 合成
+#pragma mark - Audio Player Delegate
+-(void)playerDidFinish {
+    //播放被中止后回调。
+    TLog(@"playerDidFinish");
+}
+
+-(void)playerDrainDataFinish {
+    //播放数据自然播放完成后回调。
+    TLog(@"playerDrainDataFinish");
+    [_channel invokeMethod:@"onPlayerDrainDataFinish" arguments:sendText];
+}
  
 
 #pragma mark - Nui Listener
@@ -396,7 +445,7 @@ static FlutterAliyunNui *myself = nil;
 #pragma stream input tts callback
 - (void)onStreamInputTtsEventCallback:(StreamInputTtsCallbackEvent)event taskId:(char*)taskid sessionId:(char*)sessionId ret_code:(int)ret_code error_msg:(char*)error_msg timestamp:(char*)timestamp all_response:(char*)all_response {
     NSString *log = [NSString stringWithFormat:@"\n事件回调（%d）：%s", event, all_response];
-    TLog(@"%@", log);
+//    TLog(@"%@", log);
     
     if (event == TTS_EVENT_SYNTHESIS_STARTED) {
         TLog(@"onStreamInputTtsEventCallback TTS_EVENT_SYNTHESIS_STARTED");
@@ -415,10 +464,11 @@ static FlutterAliyunNui *myself = nil;
         if (_audioController != nil) {
             // 注意这里的event事件是指语音合成完成，而非播放完成，播放完成需要由voicePlayer对象来进行通知
             [_audioController drain];
-            [_audioController stopPlayer];
+//            [_audioController stopPlayer];
         }
     } else if (event == TTS_EVENT_TASK_FAILED) {
         TLog(@"onStreamInputTtsEventCallback TTS_EVENT_TASK_FAILED:%s", error_msg);
+        NSLog(@"----%@",error_msg);
         if (_audioController != nil) {
             // 注意这里的event事件是指语音合成完成，而非播放完成，播放完成需要由voicePlayer对象来进行通知
             [_audioController drain];
@@ -436,7 +486,6 @@ static FlutterAliyunNui *myself = nil;
 
 -(void)onStreamInputTtsLogTrackCallback:(NuiSdkLogLevel)level
                              logMessage:(const char *)log {
-    [_channel invokeMethod:@"onError" arguments:@{@"errorCode": @(-1), @"errorMessage": [NSString stringWithFormat:@"%s",log]}];
     TLog(@"onStreamInputTtsLogTrackCallback log level:%d, message -> %s", level, log);
 }
 
@@ -489,41 +538,46 @@ static FlutterAliyunNui *myself = nil;
 
 
 -(NSString*) genInitParams:(NSDictionary *)flutterInitArgs {
+    NSString * jsonStr = @"";
+    @try {
+        NSString *appkey = [flutterInitArgs objectForKey:@"app_key"];
+        NSString *token = [flutterInitArgs objectForKey:@"token"];
+        NSString *deviceId = [flutterInitArgs objectForKey:@"device_id"];
+        NSString *url = [flutterInitArgs objectForKey:@"url"];
+        
+        NSMutableDictionary *ticketJsonDict = [NSMutableDictionary dictionary];
+        //获取账号访问凭证：
+        [ticketJsonDict setObject:appkey forKey:@"app_key"];
+        [ticketJsonDict setObject:token forKey:@"token"];
+        [ticketJsonDict setObject:deviceId forKey:@"device_id"];
+        [ticketJsonDict setObject:url forKey:@"url"];
      
-    NSString *appkey = [flutterInitArgs objectForKey:@"appKey"];
-    NSString *token = [flutterInitArgs objectForKey:@"token"];
-    NSString *deviceId = [flutterInitArgs objectForKey:@"deviceId"];
-    NSString *url = [flutterInitArgs objectForKey:@"url"];
-    
-    NSMutableDictionary *ticketJsonDict = [NSMutableDictionary dictionary];
-    //获取账号访问凭证：
-    [ticketJsonDict setObject:appkey forKey:@"app_key"];
-    [ticketJsonDict setObject:token forKey:@"token"];
-    [ticketJsonDict setObject:deviceId forKey:@"device_id"];
-    [ticketJsonDict setObject:url forKey:@"url"];
- 
 
-    //当初始化SDK时的save_log参数取值为true时，该参数生效。表示是否保存音频debug，该数据保存在debug目录中，需要确保debug_path有效可写
-    [ticketJsonDict setObject:save_wav ? @"true" : @"false" forKey:@"save_wav"];
-    //debug目录，当初始化SDK时的save_log参数取值为true时，该目录用于保存中间音频文件
-    [ticketJsonDict setObject:debug_path forKey:@"debug_path"];
+        //当初始化SDK时的save_log参数取值为true时，该参数生效。表示是否保存音频debug，该数据保存在debug目录中，需要确保debug_path有效可写
+        [ticketJsonDict setObject:save_wav ? @"true" : @"false" forKey:@"save_wav"];
+        //debug目录，当初始化SDK时的save_log参数取值为true时，该目录用于保存中间音频文件
+        [ticketJsonDict setObject:debug_path forKey:@"debug_path"];
 
-    //过滤SDK内部日志通过回调送回到用户层
-    [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_ERROR] forKey:@"log_track_level"];
-    //设置本地存储日志文件的最大字节数, 最大将会在本地存储2个设置字节大小的日志文件
-    [ticketJsonDict setObject:@(50 * 1024 * 1024) forKey:@"max_log_file_size"];
+        //过滤SDK内部日志通过回调送回到用户层
+        [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_ERROR] forKey:@"log_track_level"];
+        //设置本地存储日志文件的最大字节数, 最大将会在本地存储2个设置字节大小的日志文件
+        [ticketJsonDict setObject:@(50 * 1024 * 1024) forKey:@"max_log_file_size"];
 
-    //FullMix = 0   // 选用此模式开启本地功能并需要进行鉴权注册
-    //FullCloud = 1 // 在线实时语音识别可以选这个
-    //FullLocal = 2 // 选用此模式开启本地功能并需要进行鉴权注册
-    //AsrMix = 3    // 选用此模式开启本地功能并需要进行鉴权注册
-    //AsrCloud = 4  // 在线一句话识别可以选这个
-    //AsrLocal = 5  // 选用此模式开启本地功能并需要进行鉴权注册
-    [ticketJsonDict setObject:@"4" forKey:@"service_mode"]; // 必填
-    
-    NSData *data = [NSJSONSerialization dataWithJSONObject:ticketJsonDict options:NSJSONWritingPrettyPrinted error:nil];
-    NSString * jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
-    return jsonStr;
+        //FullMix = 0   // 选用此模式开启本地功能并需要进行鉴权注册
+        //FullCloud = 1 // 在线实时语音识别可以选这个
+        //FullLocal = 2 // 选用此模式开启本地功能并需要进行鉴权注册
+        //AsrMix = 3    // 选用此模式开启本地功能并需要进行鉴权注册
+        //AsrCloud = 4  // 在线一句话识别可以选这个
+        //AsrLocal = 5  // 选用此模式开启本地功能并需要进行鉴权注册
+        [ticketJsonDict setObject:@"4" forKey:@"service_mode"]; // 必填
+        
+        NSData *data = [NSJSONSerialization dataWithJSONObject:ticketJsonDict options:NSJSONWritingPrettyPrinted error:nil];
+        jsonStr = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
+    } @catch (NSException *exception) {
+        NSLog(@"%@",exception.reason);
+    } @finally {
+        return jsonStr;
+    }
 }
 
 

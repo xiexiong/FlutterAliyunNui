@@ -26,6 +26,7 @@
 
 // 处理 Dart 层调用的所有方法
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+    NSLog(@"method:%@-args:%@",call.method,call.arguments);
     if ([@"initRecognize" isEqualToString:call.method]) {
         // 初始化识别
         result([self.nui nuiSdkInit:call.arguments]);
@@ -58,6 +59,18 @@
         // 取消流式TTS
         [self.nui cancelStreamInputTts];
         result(nil);
+//    } else if ([@"isPlaying" isEqualToString:call.method]) {
+//        result(@([self.nui isPlaying]));
+//    } else if ([@"isPaused" isEqualToString:call.method]) {
+//        result(@([self.nui isPaused]));
+//    } else if ([@"isStopped" isEqualToString:call.method]) {
+//        result(@([self.nui isStopped]));
+//    } else if ([@"play" isEqualToString:call.method]) {
+//        result(@([self.nui pa]));
+//    } else if ([@"pause" isEqualToString:call.method]) {
+//        result(@([self.nui pausePlayer]));
+//    } else if ([@"resume" isEqualToString:call.method]) {
+//        result(@([self.nui resumePlayer]));
     } else {
         // 未实现的方法
         result(FlutterMethodNotImplemented);

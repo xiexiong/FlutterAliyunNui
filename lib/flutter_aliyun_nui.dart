@@ -9,58 +9,50 @@ export 'src/nui_config.dart';
 export 'src/nui_event.dart';
 export 'src/nui_controller.dart';
 
-class FlutterAliyunNui {
+class ALNui {
   static const MethodChannel _channel = MethodChannel('flutter_aliyun_nui');
-  static Future<String> Function()? _tokenProvider;
-  static String _token = '';
   static bool recognizeOnReady = false;
+  static bool ttsOnReady = false;
 
-  static void setRecognizeResultHandler({required Function(NuiRecognizeResult) handlerResult, required Function(NuiError) handlerError}) {
+  static void setRecognizeResultHandler({
+    Function(NuiRecognizeResult)? handlerResult,
+    Function? onPlayerDrainDataFinish,
+    Function(NuiError)? handlerError,
+  }) {
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'onRecognizeResult':
-          handlerResult(NuiRecognizeResult.fromMap(call.arguments));
+          print('NBSDK => onRecognizeResult');
+          print('阿里云识别结果:${call.arguments.toString()}');
+          handlerResult?.call((NuiRecognizeResult.fromMap(call.arguments)));
+          break;
+        case 'onPlayerDrainDataFinish':
+          onPlayerDrainDataFinish?.call();
+          print('NBSDK => onPlayerDrainDataFinish');
+          print('阿里云播放数据:${call.arguments.toString()}');
           break;
         case 'onError':
+          print('NBSDK => onError');
+          print(call.arguments.toString());
           final error = NuiError.fromMap(call.arguments);
           // 240068 token 无效/过期 清空 token 重新启动
           if (error.errorCode == 240068) {
-            _token = '';
-            await startRecognize();
+            recognizeOnReady = false;
           }
-          handlerError(error);
+          handlerError?.call(error);
           break;
       }
       return null;
     });
   }
 
-  /// 设置获取 token 的方法
-  static void setTokenProvider(Future<String> Function() provider) {
-    _tokenProvider = provider;
-  }
-
-  static Future<void> _getToken() async {
-    if (_token.isNotEmpty) return;
-    assert(_tokenProvider != null, 'tokenProvider not set!!!');
-    _token = await _tokenProvider!.call();
-  }
-
   static Future<void> initRecognize({required Map<String, dynamic> params}) async {
-    await _getToken();
-    if (_token.isNotEmpty) {
-      params['token'] = _token;
-      var initResult = await _channel.invokeMethod('initRecognize', params);
-      recognizeOnReady = initResult == '0';
-      return initResult;
-    }
+    var initResult = await _channel.invokeMethod('initRecognize', params);
+    recognizeOnReady = initResult == '0';
   }
 
-  static Future<void> startRecognize() async {
-    await _getToken();
-    if (_token.isNotEmpty) {
-      await _channel.invokeMethod('startRecognize', {'token': _token});
-    }
+  static Future<void> startRecognize(String token) async {
+    await _channel.invokeMethod('startRecognize', {'token': token});
   }
 
   static Future<void> stopRecognize() async {
@@ -68,29 +60,45 @@ class FlutterAliyunNui {
   }
 
   static Future<void> startStreamInputTts(Map<String, dynamic> params, {bool retry = false}) async {
-    await _getToken();
-    if (_token.isNotEmpty) {
-      params['token'] = _token;
-      // if (retry) {
-      //   params['token'] = '6373809de80541a4a433c7fa79e37a2a';
-      // }
-      int ret = await _channel.invokeMethod('startStreamInputTts', params);
-      if (ret != 0) {
-        startStreamInputTts(params);
-      }
-    }
+    print('NBSDK => startStreamInputTts');
+    print(params.toString());
+    int ret = await _channel.invokeMethod('startStreamInputTts', params);
+    ttsOnReady = ret == 0;
   }
 
-  static Future<void> sendStreamInputTts(Map<String, dynamic> params) async {
-    await _channel.invokeMethod('sendStreamInputTts', params);
+  static Future<void> sendStreamInputTts(String text) async {
+    print('NBSDK => sendStreamInputTts $text');
+    await _channel.invokeMethod('sendStreamInputTts', {'text': text});
   }
 
   static Future<void> stopStreamInputTts() async {
+    print('NBSDK => stopStreamInputTts');
     await _channel.invokeMethod('stopStreamInputTts');
+    ttsOnReady = false;
+  }
+
+  static Future<void> cancelStreamInputTts() async {
+    print('NBSDK => cancelStreamInputTts');
+    await _channel.invokeMethod('cancelStreamInputTts');
+    ttsOnReady = false;
+  }
+
+  static Future<bool> isPlaying() async {
+    return await _channel.invokeMethod('isPlaying');
+  }
+
+  static Future<bool> isPaused() async {
+    return await _channel.invokeMethod('isPaused');
+  }
+
+  static Future<bool> isStopped() async {
+    return await _channel.invokeMethod('isStopped');
   }
 
   static Future<void> release() async {
+    print('NBSDK => release');
     recognizeOnReady = false;
+    ttsOnReady = false;
     await _channel.invokeMethod('release');
   }
 }
