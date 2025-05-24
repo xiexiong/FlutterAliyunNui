@@ -1,6 +1,6 @@
-class InitRecognizeConfig {
-  late String appKey;
-
+class NuiConfig {
+  String appKey;
+  String token;
   String? deviceId;
   String? url;
   String? format;
@@ -10,8 +10,9 @@ class InitRecognizeConfig {
   int? pitchRate;
   int? volume;
 
-  InitRecognizeConfig(
+  NuiConfig(
       {required this.appKey,
+      required this.token,
       this.deviceId,
       this.url,
       this.format,
@@ -20,23 +21,19 @@ class InitRecognizeConfig {
       this.speechRate,
       this.pitchRate,
       this.volume});
-
-  InitRecognizeConfig.fromJson(Map<String, dynamic> json) {
-    appKey = json['app_key'] ?? '';
-    assert(appKey.isNotEmpty, 'appKey can not null');
-    deviceId = json['device_id'] ?? '';
-    url = json['url'] ?? 'wss://nls-gateway.cn-shanghai.aliyuncs.com:443/ws/v1';
-    format = json['format'] ?? 'pcm';
-    voice = json['voice'] ?? 'xiaoyun';
-    sampleRate = json['sample_rate'] ?? 16000;
-    speechRate = json['speech_rate'] ?? 0;
-    pitchRate = json['pitch_rate'] ?? 0;
-    volume = json['volume'] ?? 50;
-  }
-
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toRecognizeJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['app_key'] = appKey;
+    data['token'] = token;
+    data['device_id'] = deviceId ?? '';
+    data['url'] = url ?? 'wss://nls-gateway.cn-shanghai.aliyuncs.com:443/ws/v1';
+    return data;
+  }
+
+  Map<String, dynamic> toStreamTtsJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['app_key'] = appKey;
+    data['token'] = token;
     data['device_id'] = deviceId ?? '';
     data['url'] = url ?? 'wss://nls-gateway.cn-shanghai.aliyuncs.com:443/ws/v1';
     data['format'] = format ?? 'pcm';

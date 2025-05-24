@@ -22,17 +22,18 @@ class ALNui {
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'onRecognizeResult':
-          print('NBSDK => onRecognizeResult');
+          print('NBSDK ======> onRecognizeResult');
           print('阿里云识别结果:${call.arguments.toString()}');
           handlerResult?.call((NuiRecognizeResult.fromMap(call.arguments)));
           break;
         case 'onPlayerDrainDataFinish':
           onPlayerDrainDataFinish?.call();
-          print('NBSDK => onPlayerDrainDataFinish');
-          print('阿里云播放数据:${call.arguments.toString()}');
+          print('NBSDK ======> onPlayerDrainDataFinish');
+          List data = call.arguments ?? [];
+          print('阿里云播放数据:${data.join('')}');
           break;
         case 'onError':
-          print('NBSDK => onError');
+          print('NBSDK ======> onError');
           print(call.arguments.toString());
           final error = NuiError.fromMap(call.arguments);
           // 240068 token 无效/过期 清空 token 重新启动
@@ -46,8 +47,8 @@ class ALNui {
     });
   }
 
-  static Future<void> initRecognize({required Map<String, dynamic> params}) async {
-    var initResult = await _channel.invokeMethod('initRecognize', params);
+  static Future<void> initRecognize(NuiConfig config) async {
+    var initResult = await _channel.invokeMethod('initRecognize', config.toRecognizeJson());
     recognizeOnReady = initResult == '0';
   }
 
@@ -59,26 +60,26 @@ class ALNui {
     await _channel.invokeMethod('stopRecognize');
   }
 
-  static Future<void> startStreamInputTts(Map<String, dynamic> params, {bool retry = false}) async {
-    print('NBSDK => startStreamInputTts');
-    print(params.toString());
-    int ret = await _channel.invokeMethod('startStreamInputTts', params);
+  static Future<void> startStreamInputTts(NuiConfig config, {bool retry = false}) async {
+    print('NBSDK ======> startStreamInputTts');
+    print(config.toStreamTtsJson().toString());
+    var ret = await _channel.invokeMethod('startStreamInputTts', config.toStreamTtsJson());
     ttsOnReady = ret == 0;
   }
 
   static Future<void> sendStreamInputTts(String text) async {
-    print('NBSDK => sendStreamInputTts $text');
+    print('NBSDK ======> sendStreamInputTts $text');
     await _channel.invokeMethod('sendStreamInputTts', {'text': text});
   }
 
   static Future<void> stopStreamInputTts() async {
-    print('NBSDK => stopStreamInputTts');
+    print('NBSDK ======> stopStreamInputTts');
     await _channel.invokeMethod('stopStreamInputTts');
     ttsOnReady = false;
   }
 
   static Future<void> cancelStreamInputTts() async {
-    print('NBSDK => cancelStreamInputTts');
+    print('NBSDK ======> cancelStreamInputTts');
     await _channel.invokeMethod('cancelStreamInputTts');
     ttsOnReady = false;
   }
@@ -96,7 +97,7 @@ class ALNui {
   }
 
   static Future<void> release() async {
-    print('NBSDK => release');
+    print('NBSDK ======> release');
     recognizeOnReady = false;
     ttsOnReady = false;
     await _channel.invokeMethod('release');

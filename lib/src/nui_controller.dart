@@ -24,12 +24,13 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   }
 
   Future<void> _initRecognize() async {
-    await ALNui.initRecognize(params: {
-      'app_key': AliyunConfig.appKey,
-      'device_id': '660668cf0c874c848fbb467603927ebd',
-      'url': AliyunConfig.url,
-      'token': aliToken,
-    });
+    NuiConfig config = NuiConfig(
+      appKey: AliyunConfig.appKey,
+      deviceId: '660668cf0c874c848fbb467603927ebd',
+      url: AliyunConfig.url,
+      token: aliToken,
+    );
+    await ALNui.initRecognize(config);
     ALNui.setRecognizeResultHandler(
       handlerResult: (result) {
         setState(() {
@@ -57,18 +58,19 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   }
 
   Future<void> _startStreamInputTts() async {
-    await ALNui.startStreamInputTts({
-      'app_key': AliyunConfig.appKey,
-      'device_id': '660668cf0c874c848fbb467603927ebd',
-      'url': AliyunConfig.url,
-      'token': aliToken,
-      'format': 'pcm',
-      'voice': 'xiaoyun',
-      'sample_rate': 16000,
-      'speech_rate': 0,
-      'pitch_rate': 0,
-      'volume': 80,
-    });
+    NuiConfig config = NuiConfig(
+      appKey: AliyunConfig.appKey,
+      deviceId: '660668cf0c874c848fbb467603927ebd',
+      url: AliyunConfig.url,
+      token: aliToken,
+      format: 'pcm',
+      voice: 'xiaoyun',
+      sampleRate: 16000,
+      speechRate: 0,
+      pitchRate: 0,
+      volume: 80,
+    );
+    await ALNui.startStreamInputTts(config);
   }
 
   Future<void> _sendStreamInputTts() async {

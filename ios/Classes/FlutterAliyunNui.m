@@ -127,66 +127,70 @@ static FlutterAliyunNui *myself = nil;
 
 // 开始合成
 - (void)startStreamInputTts:(NSDictionary *)args result:(FlutterResult)result{
-    [sendText removeAllObjects];
-    if (!_nuiTts) {
-        _nuiTts = [StreamInputTts get_instance];
-        _nuiTts.delegate = self;
+    @try {
+        [sendText removeAllObjects];
+        if (!_nuiTts) {
+            _nuiTts = [StreamInputTts get_instance];
+            _nuiTts.delegate = self;
+        }
+        if (_audioController == nil) {
+            return;
+        }
+       
+       NSMutableDictionary *ticketJsonDict = [NSMutableDictionary dictionary];
+       //获取账号访问凭证：
+       [ticketJsonDict setObject:[args objectForKey:@"app_key"] forKey:@"app_key"];
+       [ticketJsonDict setObject:[args objectForKey:@"token"] forKey:@"token"];
+       [ticketJsonDict setObject:[args objectForKey:@"device_id"] forKey:@"device_id"];
+       [ticketJsonDict setObject:[args objectForKey:@"url"] forKey:@"url"];
+
+        
+        [ticketJsonDict setObject:@"10000" forKey:@"complete_waiting_ms"];
+
+        //debug目录，当初始化SDK时的saveLog参数取值为YES时，该目录用于保存日志等调试信息
+        NSString *debug_path = [_utils createDir];
+        [ticketJsonDict setObject:debug_path forKey:@"debug_path"];
+        //过滤SDK内部日志通过回调送回到用户层
+        [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_INFO] forKey:@"log_track_level"];
+        //设置本地存储日志文件的最大字节数, 最大将会在本地存储2个设置字节大小的日志文件
+        [ticketJsonDict setObject:@(50 * 1024 * 1024) forKey:@"max_log_file_size"];
+     
+        
+        NSError *error;
+        NSData *ticketJsonData = [NSJSONSerialization dataWithJSONObject:ticketJsonDict options:0 error:&error];
+        NSString *ticket = [[NSString alloc] initWithData:ticketJsonData encoding:NSUTF8StringEncoding];
+     
+
+        // 接口说明：https://help.aliyun.com/zh/isi/developer-reference/interface-description
+        NSString *voice = [args objectForKey:@"voice"];
+        NSString *format = [args objectForKey:@"format"];
+        NSInteger sample_rate = [[args objectForKey:@"sample_rate"] integerValue];
+        NSInteger volume = [[args objectForKey:@"volume"] integerValue];
+        NSInteger speech_rate = [[args objectForKey:@"speech_rate"] integerValue];
+        NSInteger pitch_rate = [[args objectForKey:@"pitch_rate"] integerValue];
+        bool enable_subtitle = [[args objectForKey:@"enable_subtitle"] integerValue];
+        NSString *session_id = [args objectForKey:@"session_id"];
+        NSDictionary *paramsJsonDict = @{
+            @"voice": voice,
+            @"format": format,
+            @"sample_rate": @(sample_rate),
+            @"volume": @(volume),
+            @"speech_rate": @(speech_rate),
+            @"pitch_rate": @(pitch_rate),
+            @"enable_subtitle": @(false)
+        };
+        NSData *paramsJsonData = [NSJSONSerialization dataWithJSONObject:paramsJsonDict options:0 error:&error];
+        NSString *parameters = [[NSString alloc] initWithData:paramsJsonData encoding:NSUTF8StringEncoding];
+      
+        TLog(@"%@", parameters);
+        
+        int ret = [self.nuiTts startStreamInputTts:[ticket UTF8String] parameters:[parameters UTF8String] sessionId:[session_id UTF8String] logLevel:NUI_LOG_LEVEL_VERBOSE saveLog:YES];
+        NSString *retLog = [NSString stringWithFormat:@"\n开始 返回值：%d", ret];
+        TLog(@"%@", retLog);
+        result(@(ret));
+    } @catch (NSException *exception) {
+        result(nil);
     }
-    if (_audioController == nil) {
-        return;
-    }
-   
-   NSMutableDictionary *ticketJsonDict = [NSMutableDictionary dictionary];
-   //获取账号访问凭证：
-   [ticketJsonDict setObject:[args objectForKey:@"app_key"] forKey:@"app_key"];
-   [ticketJsonDict setObject:[args objectForKey:@"token"] forKey:@"token"];
-   [ticketJsonDict setObject:[args objectForKey:@"device_id"] forKey:@"device_id"];
-   [ticketJsonDict setObject:[args objectForKey:@"url"] forKey:@"url"];
-
-    
-    [ticketJsonDict setObject:@"10000" forKey:@"complete_waiting_ms"];
-
-    //debug目录，当初始化SDK时的saveLog参数取值为YES时，该目录用于保存日志等调试信息
-    NSString *debug_path = [_utils createDir];
-    [ticketJsonDict setObject:debug_path forKey:@"debug_path"];
-    //过滤SDK内部日志通过回调送回到用户层
-    [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_INFO] forKey:@"log_track_level"];
-    //设置本地存储日志文件的最大字节数, 最大将会在本地存储2个设置字节大小的日志文件
-    [ticketJsonDict setObject:@(50 * 1024 * 1024) forKey:@"max_log_file_size"];
- 
-    
-    NSError *error;
-    NSData *ticketJsonData = [NSJSONSerialization dataWithJSONObject:ticketJsonDict options:0 error:&error];
-    NSString *ticket = [[NSString alloc] initWithData:ticketJsonData encoding:NSUTF8StringEncoding];
- 
-
-    // 接口说明：https://help.aliyun.com/zh/isi/developer-reference/interface-description
-    NSString *voice = [args objectForKey:@"voice"];
-    NSString *format = [args objectForKey:@"format"];
-    NSInteger sample_rate = [[args objectForKey:@"sample_rate"] integerValue];
-    NSInteger volume = [[args objectForKey:@"volume"] integerValue];
-    NSInteger speech_rate = [[args objectForKey:@"speech_rate"] integerValue];
-    NSInteger pitch_rate = [[args objectForKey:@"pitch_rate"] integerValue];
-    bool enable_subtitle = [[args objectForKey:@"enable_subtitle"] integerValue];
-    NSString *session_id = [args objectForKey:@"session_id"];
-    NSDictionary *paramsJsonDict = @{
-        @"voice": voice,
-        @"format": format,
-        @"sample_rate": @(sample_rate),
-        @"volume": @(volume),
-        @"speech_rate": @(speech_rate),
-        @"pitch_rate": @(pitch_rate),
-        @"enable_subtitle": @(enable_subtitle)
-    };
-    NSData *paramsJsonData = [NSJSONSerialization dataWithJSONObject:paramsJsonDict options:0 error:&error];
-    NSString *parameters = [[NSString alloc] initWithData:paramsJsonData encoding:NSUTF8StringEncoding];
-  
-    TLog(@"%@", parameters);
-    
-    int ret = [self.nuiTts startStreamInputTts:[ticket UTF8String] parameters:[parameters UTF8String] sessionId:[session_id UTF8String] logLevel:NUI_LOG_LEVEL_VERBOSE saveLog:YES];
-    NSString *retLog = [NSString stringWithFormat:@"\n开始 返回值：%d", ret];
-    TLog(@"%@", retLog);
-    result(@(ret));
 }
 
 // 流式播放
