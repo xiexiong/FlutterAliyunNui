@@ -128,7 +128,12 @@ static FlutterAliyunNui *myself = nil;
 // 开始合成
 - (void)startStreamInputTts:(NSDictionary *)args result:(FlutterResult)result{
     @try {
-        [sendText removeAllObjects];
+        if (_audioController != nil) {
+            [_audioController stopPlayer];
+        }
+        if (sendText != nil) {
+            [sendText removeAllObjects];
+        }
         if (!_nuiTts) {
             _nuiTts = [StreamInputTts get_instance];
             _nuiTts.delegate = self;
@@ -136,25 +141,20 @@ static FlutterAliyunNui *myself = nil;
         if (_audioController == nil) {
             return;
         }
-       
        NSMutableDictionary *ticketJsonDict = [NSMutableDictionary dictionary];
        //获取账号访问凭证：
        [ticketJsonDict setObject:[args objectForKey:@"app_key"] forKey:@"app_key"];
        [ticketJsonDict setObject:[args objectForKey:@"token"] forKey:@"token"];
        [ticketJsonDict setObject:[args objectForKey:@"device_id"] forKey:@"device_id"];
        [ticketJsonDict setObject:[args objectForKey:@"url"] forKey:@"url"];
-
-        
-        [ticketJsonDict setObject:@"10000" forKey:@"complete_waiting_ms"];
-
-        //debug目录，当初始化SDK时的saveLog参数取值为YES时，该目录用于保存日志等调试信息
+       [ticketJsonDict setObject:@"10000" forKey:@"complete_waiting_ms"];
+       //debug目录，当初始化SDK时的saveLog参数取值为YES时，该目录用于保存日志等调试信息
         NSString *debug_path = [_utils createDir];
         [ticketJsonDict setObject:debug_path forKey:@"debug_path"];
         //过滤SDK内部日志通过回调送回到用户层
-        [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_INFO] forKey:@"log_track_level"];
+        [ticketJsonDict setObject:[NSString stringWithFormat:@"%d", NUI_LOG_LEVEL_ERROR] forKey:@"log_track_level"];
         //设置本地存储日志文件的最大字节数, 最大将会在本地存储2个设置字节大小的日志文件
         [ticketJsonDict setObject:@(50 * 1024 * 1024) forKey:@"max_log_file_size"];
-     
         
         NSError *error;
         NSData *ticketJsonData = [NSJSONSerialization dataWithJSONObject:ticketJsonDict options:0 error:&error];
@@ -183,7 +183,6 @@ static FlutterAliyunNui *myself = nil;
         NSString *parameters = [[NSString alloc] initWithData:paramsJsonData encoding:NSUTF8StringEncoding];
       
         TLog(@"%@", parameters);
-        
         int ret = [self.nuiTts startStreamInputTts:[ticket UTF8String] parameters:[parameters UTF8String] sessionId:[session_id UTF8String] logLevel:NUI_LOG_LEVEL_VERBOSE saveLog:YES];
         NSString *retLog = [NSString stringWithFormat:@"\n开始 返回值：%d", ret];
         TLog(@"%@", retLog);
@@ -217,7 +216,7 @@ static FlutterAliyunNui *myself = nil;
     int ret = [self.nuiTts asyncStopStreamInputTts]; // 非阻塞
 //   int ret = [self.nuiTts stopStreamInputTts]; // 阻塞
    NSString *retLog = [NSString stringWithFormat:@"\n停止 返回值：%d", ret];
-   TLog(@"%@", retLog); 
+   TLog(@"%@", retLog);
 }
 
 // 取消
@@ -309,6 +308,9 @@ static FlutterAliyunNui *myself = nil;
 -(void)playerDrainDataFinish {
     //播放数据自然播放完成后回调。
     TLog(@"playerDrainDataFinish");
+    if (_audioController != nil) {
+        [_audioController stopPlayer];
+    }
     [_channel invokeMethod:@"onPlayerDrainDataFinish" arguments:sendText];
 }
  
@@ -388,7 +390,7 @@ static FlutterAliyunNui *myself = nil;
 }
 
 -(int)onNuiNeedAudioData:(char *)audioData length:(int)len {
-//    TLog(@"onNuiNeedAudioData");
+    //    TLog(@"onNuiNeedAudioData");
     static int emptyCount = 0;
     @autoreleasepool {
         @synchronized(_recordedVoiceData){
@@ -468,11 +470,10 @@ static FlutterAliyunNui *myself = nil;
         if (_audioController != nil) {
             // 注意这里的event事件是指语音合成完成，而非播放完成，播放完成需要由voicePlayer对象来进行通知
             [_audioController drain];
-//            [_audioController stopPlayer];
+            // [_audioController stopPlayer];
         }
     } else if (event == TTS_EVENT_TASK_FAILED) {
         TLog(@"onStreamInputTtsEventCallback TTS_EVENT_TASK_FAILED:%s", error_msg);
-        NSLog(@"----%@",error_msg);
         if (_audioController != nil) {
             // 注意这里的event事件是指语音合成完成，而非播放完成，播放完成需要由voicePlayer对象来进行通知
             [_audioController drain];
