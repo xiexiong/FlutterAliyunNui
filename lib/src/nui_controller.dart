@@ -4,7 +4,7 @@ import 'dart:async';
 
 class AliyunConfig {
   static const appKey = 'K2W2xXRFH90s93gz';
-  static const url = 'wss://nls-gateway.cn-shanghai.aliyuncs.com:443/ws/v1';
+  static const url = 'wss://nls-gateway-cn-beijing.aliyuncs.com/ws/v1';
 }
 
 class VoiceRecognitionPage extends StatefulWidget {
