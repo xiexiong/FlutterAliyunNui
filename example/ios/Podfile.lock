@@ -1,28 +1,47 @@
 PODS:
+  - AliyunIOSNuiSDK (0.0.1)
+  - audioplayers_darwin (0.0.1):
+    - Flutter
+  - connectivity_plus (0.0.1):
+    - Flutter
   - Flutter (1.0.0)
   - flutter_aliyun_nui (0.0.1):
+    - AliyunIOSNuiSDK
     - Flutter
-  - integration_test (0.0.1):
+  - path_provider_foundation (0.0.1):
     - Flutter
+    - FlutterMacOS
 
 DEPENDENCIES:
+  - AliyunIOSNuiSDK (from `/Users/andy/zwork/code/AliyunIOSNuiSDK`)
+  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/ios`)
+  - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - Flutter (from `Flutter`)
   - flutter_aliyun_nui (from `.symlinks/plugins/flutter_aliyun_nui/ios`)
-  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
 
 EXTERNAL SOURCES:
+  AliyunIOSNuiSDK:
+    :path: "/Users/andy/zwork/code/AliyunIOSNuiSDK"
+  audioplayers_darwin:
+    :path: ".symlinks/plugins/audioplayers_darwin/ios"
+  connectivity_plus:
+    :path: ".symlinks/plugins/connectivity_plus/ios"
   Flutter:
     :path: Flutter
   flutter_aliyun_nui:
     :path: ".symlinks/plugins/flutter_aliyun_nui/ios"
-  integration_test:
-    :path: ".symlinks/plugins/integration_test/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
 
 SPEC CHECKSUMS:
+  AliyunIOSNuiSDK: 6155065558eeafaf5355286b9bb0b83d4891308f
+  audioplayers_darwin: ccf9c770ee768abb07e26d90af093f7bab1c12ab
+  connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  flutter_aliyun_nui: a0a15027f1558a4beb14ce89cf3e2971f2a0c060
-  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  flutter_aliyun_nui: 598008ad41a4b32fa468db95d4979001377b5d39
+  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
 
-PODFILE CHECKSUM: 6e700dec67e6deac9b1c69bb14c49a2217a12d15
+PODFILE CHECKSUM: 6dd62a1dc51321a92aaed88de86ccc9dbd96f7b1
 
 COCOAPODS: 1.16.2

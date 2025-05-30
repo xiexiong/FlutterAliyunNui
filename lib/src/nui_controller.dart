@@ -5,6 +5,7 @@ import 'dart:async';
 class AliyunConfig {
   static const appKey = 'K2W2xXRFH90s93gz';
   static const url = 'wss://nls-gateway-cn-beijing.aliyuncs.com/ws/v1';
+  static const token = 'd2e5cda4e2524e9c94dd9dbdc977c6ee';
 }
 
 class VoiceRecognitionPage extends StatefulWidget {
@@ -28,7 +29,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
       appKey: AliyunConfig.appKey,
       deviceId: '660668cf0c874c848fbb467603927ebd',
       url: AliyunConfig.url,
-      token: aliToken,
+      token: AliyunConfig.token,
     );
     await ALNui.initRecognize(config);
     ALNui.setRecognizeResultHandler(
@@ -50,7 +51,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     setState(() {
       _recognizedText = '';
     });
-    await ALNui.startRecognize(aliToken);
+    await ALNui.startRecognize(AliyunConfig.token);
   }
 
   Future<void> _stopRecognition() async {
@@ -62,7 +63,7 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
       appKey: AliyunConfig.appKey,
       deviceId: '660668cf0c874c848fbb467603927ebd',
       url: AliyunConfig.url,
-      token: aliToken,
+      token: AliyunConfig.token,
       format: 'pcm',
       voice: 'xiaoyun',
       sampleRate: 16000,
@@ -105,10 +106,6 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
 
   Future<void> _cancelStreamInputTts() async {
     ALNui.cancelStreamInputTts();
-  }
-
-  String get aliToken {
-    return 'c15284bd77a9428ea7de51811a66387d';
   }
 
   @override
