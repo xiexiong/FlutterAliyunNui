@@ -1,9 +1,6 @@
 // android/src/main/kotlin/com/example/flutter_aliyun_nui/FlutterAliyunNuiPlugin.kt
 package com.example.flutter_aliyun_nui
 
-import com.aliyun.nui.NuiAgent
-import com.aliyun.nui.NuiConstants
-import com.aliyun.nui.NuiEventAdapter
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -13,7 +10,6 @@ import org.json.JSONObject
 
 class FlutterAliyunNuiPlugin: FlutterPlugin, MethodCallHandler {
   private lateinit var channel: MethodChannel
-  private var nuiAgent: NuiAgent? = null
 
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_aliyun_nui")
@@ -23,7 +19,7 @@ class FlutterAliyunNuiPlugin: FlutterPlugin, MethodCallHandler {
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
       "initRecognize" -> {
-        initNui(call.argument, result)
+//        initNui(call.argument, result)
       }
       "startRecognize" -> {
         val params = call.arguments as Map<String, Any>
@@ -39,45 +35,45 @@ class FlutterAliyunNuiPlugin: FlutterPlugin, MethodCallHandler {
     }
   }
 
-  private fun initNui( Map<String, Any> args, result: Result) {
-    val appKey = call.argument<String>("appKey")
-    val token = call.argument<String>("token")
-    val deviceId = call.argument<String>("deviceId")
-    val url = call.argument<String>("url")
+//  private fun initNui( Map<String, Any>? args, result: Result) {
+//    val appKey = call?.argument<String>("appKey")
+//    val token = call?.argument<String>("token")
+//    val deviceId = call?.argument<String>("deviceId")
+//    val url = call?.argument<String>("url")
 
-    nuiAgent = NuiAgent.create()
-    nuiAgent?.init(appKey, token, deviceId)
-    nuiAgent?.setEventCallback(object : NuiEventAdapter() {
-      override fun onRecognizeResult(result: String?, isLast: Boolean) {
-        channel.invokeMethod("onRecognizeResult", mapOf(
-          "result" to result,
-          "isLast" to isLast
-        ))
-      }
-
-      override fun onError(errorCode: Int, errorMessage: String?) {
-        channel.invokeMethod("onError", mapOf(
-          "errorCode" to errorCode,
-          "errorMessage" to errorMessage
-        ))
-      }
-    })
-    result.success(null)
-  }
+//    nuiAgent = NuiAgent.create()
+//    nuiAgent?.init(appKey, token, deviceId)
+//    nuiAgent?.setEventCallback(object : NuiEventAdapter() {
+//      override fun onRecognizeResult(result: String?, isLast: Boolean) {
+//        channel.invokeMethod("onRecognizeResult", mapOf(
+//          "result" to result,
+//          "isLast" to isLast
+//        ))
+//      }
+//
+//      override fun onError(errorCode: Int, errorMessage: String?) {
+//        channel.invokeMethod("onError", mapOf(
+//          "errorCode" to errorCode,
+//          "errorMessage" to errorMessage
+//        ))
+//      }
+//    })
+//    result.success(null)
+//  }
 
   private fun startRecognize(params: Map<String, Any>, result: Result) {
     val json = JSONObject(params)
-    nuiAgent?.startRecognize(json)
+//    nuiAgent?.startRecognize(json)
     result.success(null)
   }
 
   private fun stopRecognize(result: Result) {
-    nuiAgent?.stopRecognize()
+//    nuiAgent?.stopRecognize()
     result.success(null)
   }
 
   private fun release(result: Result) {
-    nuiAgent?.release()
+//    nuiAgent?.release()
     result.success(null)
   }
 
