@@ -1,8 +1,7 @@
 rootProject.name = 'flutter_aliyun_nui'
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenLocal()   // 关键！启用本地Maven仓库:ml-citation{ref="4,7" data="citationList"}
+    repositories { 
         google()
         mavenCentral()
     }

@@ -9,8 +9,7 @@ pluginManagement {
 
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
-    repositories {
-        maven { url "/Users/andy/zwork/mvn-repo" } 
+    repositories { 
         google()
         mavenCentral()
         gradlePluginPortal()
