@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_aliyun_nui/flutter_aliyun_nui.dart';
 import 'dart:async';
 
+import 'package:flutter_aliyun_nui/src/permission.dart';
+
 class AliyunConfig {
   static const appKey = 'K2W2xXRFH90s93gz';
   static const url = 'wss://nls-gateway-cn-beijing.aliyuncs.com/ws/v1';
@@ -25,6 +27,9 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   }
 
   Future<void> _initRecognize() async {
+    if ((await PermissionUtil.checkMicAndSpeeh(context)) == false) {
+      return;
+    }
     NuiConfig config = NuiConfig(
       appKey: AliyunConfig.appKey,
       deviceId: '660668cf0c874c848fbb467603927ebd',

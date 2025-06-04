@@ -3,6 +3,7 @@ library flutter_aliyun_nui;
 
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_aliyun_nui/flutter_aliyun_nui.dart';
 
 export 'src/nui_config.dart';
@@ -29,28 +30,28 @@ class ALNui {
       try {
         switch (call.method) {
           case 'onRecognizeResult':
-            print('NBSDK ======> onRecognizeResult');
+            debugPrint('NBSDK ======> onRecognizeResult');
             if (slog != null) {
               slog?.call('onRecognizeResult: ${call.arguments.toString()}');
             }
             if (!recognizeOnReady) {
-              print('NBSDK ======> recognize not ready');
+              debugPrint('NBSDK ======> recognize not ready');
               return;
             }
 
-            print('阿里云识别结果:${call.arguments.toString()}');
+            debugPrint('阿里云识别结果:${call.arguments.toString()}');
             handlerResult?.call((NuiRecognizeResult.fromMap(call.arguments)));
             break;
           case 'onPlayerDrainDataFinish':
             onPlayerDrainDataFinish?.call();
-            print('NBSDK ======> onPlayerDrainDataFinish');
+            debugPrint('NBSDK ======> onPlayerDrainDataFinish');
             slog?.call('NBSDK ======> onPlayerDrainDataFinish');
             List data = call.arguments ?? [];
-            print('阿里云播放数据:${data.join('')}');
+            debugPrint('阿里云播放数据:${data.join('')}');
             break;
           case 'onError':
-            print('NBSDK ======> onError');
-            print(call.arguments.toString());
+            debugPrint('NBSDK ======> onError');
+            debugPrint(call.arguments.toString());
             final error = NuiError.fromMap(call.arguments);
             // 240068 token 无效/过期 清空 token 重新启动
             if (error.errorCode == 240068) {
@@ -59,7 +60,7 @@ class ALNui {
             handlerError?.call(error);
             break;
           case 'onToast':
-            print('NBSDK ======> onToast');
+            debugPrint('NBSDK ======> onToast');
             slog?.call('NBSDK ======> onToast: ${call.arguments.toString()}');
             break;
         }
@@ -88,31 +89,31 @@ class ALNui {
   static Future<void> startStreamInputTts(NuiConfig config, {bool retry = false}) async {
     try {
       slog?.call('NBSDK ======> startStreamInputTts');
-      print('NBSDK ======> startStreamInputTts ');
-      print(config.toStreamTtsJson().toString());
+      debugPrint('NBSDK ======> startStreamInputTts ');
+      debugPrint(config.toStreamTtsJson().toString());
       var ret = await _channel.invokeMethod('startStreamInputTts', config.toStreamTtsJson());
       ttsOnReady = ret == 0;
     } catch (e) {
-      print('NBSDK ======> startStreamInputTts error: $e');
+      debugPrint('NBSDK ======> startStreamInputTts error: $e');
       slog?.call('NBSDK ======> startStreamInputTts error: $e');
     }
   }
 
   static Future<void> sendStreamInputTts(String text) async {
-    print('NBSDK ======> sendStreamInputTts $text');
+    debugPrint('NBSDK ======> sendStreamInputTts $text');
     slog?.call('NBSDK ======> sendStreamInputTts $text');
     if (!ttsOnReady) {
-      print('NBSDK ======> tts not ready');
+      debugPrint('NBSDK ======> tts not ready');
       return;
     }
     await _channel.invokeMethod('sendStreamInputTts', {'text': text});
   }
 
   static Future<void> stopStreamInputTts() async {
-    print('NBSDK ======> stopStreamInputTts');
+    debugPrint('NBSDK ======> stopStreamInputTts');
     slog?.call('NBSDK ======> stopStreamInputTts');
     if (!ttsOnReady) {
-      print('NBSDK ======> tts not ready');
+      debugPrint('NBSDK ======> tts not ready');
       return;
     }
     await _channel.invokeMethod('stopStreamInputTts');
@@ -120,7 +121,7 @@ class ALNui {
   }
 
   static Future<void> cancelStreamInputTts() async {
-    print('NBSDK ======> cancelStreamInputTts');
+    debugPrint('NBSDK ======> cancelStreamInputTts');
     slog?.call('NBSDK ======> cancelStreamInputTts');
     await _channel.invokeMethod('cancelStreamInputTts');
     ttsOnReady = false;
@@ -139,7 +140,7 @@ class ALNui {
   }
 
   static Future<void> release() async {
-    print('NBSDK ======> release');
+    debugPrint('NBSDK ======> release');
     recognizeOnReady = false;
     ttsOnReady = false;
     await _channel.invokeMethod('release');

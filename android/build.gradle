@@ -16,8 +16,11 @@ buildscript {
 
 allprojects {
     repositories {
+        // 添加本地仓库路径
+        maven { url "/Users/andy/zwork/mvn-repo" } 
         google()
         mavenCentral()
+        
     }
 }
 
@@ -49,9 +52,17 @@ android {
         minSdk = 21
     }
 
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
+
     dependencies {
         testImplementation("org.jetbrains.kotlin:kotlin-test")
         testImplementation("org.mockito:mockito-core:5.0.0")
+        implementation files('libs/fastjson-1.1.46.android.jar')
+        implementation 'com.ali:nuisdk:1.0.0'  
     }
 
     testOptions {
