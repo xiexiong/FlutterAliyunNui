@@ -168,8 +168,7 @@ static FlutterAliyunNui *myself = nil;
         NSInteger sample_rate = [[args objectForKey:@"sample_rate"] integerValue];
         NSInteger volume = [[args objectForKey:@"volume"] integerValue];
         NSInteger speech_rate = [[args objectForKey:@"speech_rate"] integerValue];
-        NSInteger pitch_rate = [[args objectForKey:@"pitch_rate"] integerValue];
-        bool enable_subtitle = [[args objectForKey:@"enable_subtitle"] integerValue];
+        NSInteger pitch_rate = [[args objectForKey:@"pitch_rate"] integerValue]; 
         NSString *session_id = [args objectForKey:@"session_id"];
         NSDictionary *paramsJsonDict = @{
             @"voice": voice,

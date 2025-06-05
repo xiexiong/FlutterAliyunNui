@@ -57,16 +57,13 @@ public class SpeechRecognizer implements INativeNuiCallback {
     private final LinkedBlockingQueue<byte[]> tmpAudioQueue = new LinkedBlockingQueue<>();
     private String mRecordingAudioFilePath = "";
     private OutputStream mRecordingAudioFile = null;
-    private final Handler mHandler;
+    private Handler mHandler;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final String[] permissions = {Manifest.permission.RECORD_AUDIO};
 
     public SpeechRecognizer(Context context, MethodChannel channel) {
         this.context = context;
-        this.channel = channel;
-        HandlerThread handlerThread = new HandlerThread("process_thread");
-        handlerThread.start();
-        mHandler = new Handler(handlerThread.getLooper());
+        this.channel = channel; 
     }
 
     /**
@@ -80,12 +77,15 @@ public class SpeechRecognizer implements INativeNuiCallback {
                 break;
             case "startRecognize":
                 startRecognize(params, result);
+                result.success(null);
                 break;
             case "stopRecognize":
                 stopRecognize(result);
+                result.success(null);
                 break;
             case "release":
                 release(result);
+                result.success(null); 
                 break;
             default:
                 result.notImplemented();
@@ -96,9 +96,15 @@ public class SpeechRecognizer implements INativeNuiCallback {
      * 初始化 SDK
      */
     private void initNui(Map<String, Object> params, MethodChannel.Result result) {
-        JSONObject json = new JSONObject(params);
-        mDebugPath = context.getExternalCacheDir().getAbsolutePath() + "/debug";
-        Utils.createDir(mDebugPath);
+        if (mHandler == null) {
+            HandlerThread handlerThread = new HandlerThread("process_thread");
+            handlerThread.start();
+            mHandler = new Handler(handlerThread.getLooper());
+
+            mDebugPath = context.getExternalCacheDir().getAbsolutePath() + "/debug";
+            Utils.createDir(mDebugPath);
+        }
+        JSONObject json = new JSONObject(params); 
 
         int ret = nui_instance.initialize(this, genInitParams("", mDebugPath, json),
                 Constants.LogLevel.LOG_LEVEL_DEBUG, true);
@@ -271,7 +277,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
             Log.i(TAG, "EVENT_ASR_RESULT " + result);
             Map<String, Object> arguments = new HashMap<>();
             arguments.put("result", result);
-            arguments.put("isLast", true);
+            arguments.put("isLast", 1);
             mainHandler.post(() -> channel.invokeMethod("onRecognizeResult", arguments));
         } else if (event == Constants.NuiEvent.EVENT_ASR_PARTIAL_RESULT) {
             JSONObject jsonObject = JSON.parseObject(asrResult.asrResult);
@@ -280,7 +286,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
             Log.i(TAG, "EVENT_ASR_PARTIAL_RESULT " + result);
             Map<String, Object> arguments = new HashMap<>();
             arguments.put("result", result);
-            arguments.put("isLast", false);
+            arguments.put("isLast", 0);
             mainHandler.post(() -> channel.invokeMethod("onRecognizeResult", arguments));
         } else if (event == Constants.NuiEvent.EVENT_ASR_ERROR) {
             final String msg_text = Utils.getMsgWithErrorCode(resultCode, "start");
