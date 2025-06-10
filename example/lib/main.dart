@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_aliyun_nui/flutter_aliyun_nui.dart';
+import 'package:flutter_aliyun_nui_example/nui_controller.dart';
 
 void main() => runApp(const MyApp());
 

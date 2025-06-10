@@ -8,7 +8,6 @@ import 'package:flutter_aliyun_nui/flutter_aliyun_nui.dart';
 
 export 'src/nui_config.dart';
 export 'src/nui_event.dart';
-export 'src/nui_controller.dart';
 
 class ALNui {
   static const MethodChannel _channel = MethodChannel('flutter_aliyun_nui');
@@ -20,11 +19,12 @@ class ALNui {
     slog = slongFunction;
   }
 
-  static void setRecognizeResultHandler({
-    Function(NuiRecognizeResult)? handlerResult,
-    Function? onPlayerDrainDataFinish,
-    Function(NuiError)? handlerError,
-    Function(String)? handlerToast,
+  static void setMethodCallHandler({
+    Function(NuiRecognizeResult)? recognizeResultHandler,
+    Function? playerDrainFinishHandler,
+    Function(double)? rmsChangedHandler,
+    Function(NuiError)? errorHandler,
+    Function(String)? toastHandler,
   }) {
     _channel.setMethodCallHandler((call) async {
       try {
@@ -40,14 +40,17 @@ class ALNui {
             }
 
             debugPrint('阿里云识别结果:${call.arguments.toString()}');
-            handlerResult?.call((NuiRecognizeResult.fromMap(call.arguments)));
+            recognizeResultHandler?.call((NuiRecognizeResult.fromMap(call.arguments)));
             break;
-          case 'onPlayerDrainDataFinish':
-            onPlayerDrainDataFinish?.call();
-            debugPrint('NBSDK ======> onPlayerDrainDataFinish');
-            slog?.call('NBSDK ======> onPlayerDrainDataFinish');
+          case 'onPlayerDrainFinish':
+            playerDrainFinishHandler?.call();
+            debugPrint('NBSDK ======> playerDrainFinishHandler');
+            slog?.call('NBSDK ======> playerDrainFinishHandler');
             List data = call.arguments ?? [];
             debugPrint('阿里云播放数据:${data.join('')}');
+            break;
+          case 'onRmsChanged':
+            rmsChangedHandler?.call(call.arguments);
             break;
           case 'onError':
             debugPrint('NBSDK ======> onError');
@@ -57,7 +60,7 @@ class ALNui {
             if (error.errorCode == 240068) {
               recognizeOnReady = false;
             }
-            handlerError?.call(error);
+            errorHandler?.call(error);
             break;
           case 'onToast':
             debugPrint('NBSDK ======> onToast');

@@ -53,7 +53,7 @@ public class StreamTts {
             Log.i(TAG, "play over");
             mAudioTrack.stop();
             // mAudioTrack.releaseAudioTrack(); 
-            mainHandler.post(() -> channel.invokeMethod("onPlayerDrainDataFinish", sendText)); 
+            mainHandler.post(() -> channel.invokeMethod("onPlayerDrainFinish", sendText)); 
         }
         @Override
         public void playSoundLevel(int level) {}

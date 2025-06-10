@@ -1,3 +1,8 @@
+class AliyunConfig {
+  static const appKey = 'K2W2xXRFH90s93gz';
+  static const token = '9e01975b11e84ff9a6e3c7aa037ca27c';
+}
+
 class NuiConfig {
   String appKey;
   String token;
@@ -26,7 +31,7 @@ class NuiConfig {
     data['app_key'] = appKey;
     data['token'] = token;
     data['device_id'] = deviceId ?? '';
-    data['url'] = url ?? 'wss://nls-gateway.cn-shanghai.aliyuncs.com:443/ws/v1';
+    data['url'] = url ?? 'wss://nls-gateway-cn-beijing.aliyuncs.com/ws/v1';
     return data;
   }
 
@@ -35,7 +40,7 @@ class NuiConfig {
     data['app_key'] = appKey;
     data['token'] = token;
     data['device_id'] = deviceId ?? '';
-    data['url'] = url ?? 'wss://nls-gateway.cn-shanghai.aliyuncs.com:443/ws/v1';
+    data['url'] = url ?? 'wss://nls-gateway-cn-beijing.aliyuncs.com/ws/v1';
     data['format'] = format ?? 'pcm';
     data['voice'] = voice ?? 'xiaoyun';
     data['sample_rate'] = sampleRate ?? 16000;

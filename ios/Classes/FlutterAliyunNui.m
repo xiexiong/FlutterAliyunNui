@@ -311,7 +311,7 @@ static FlutterAliyunNui *myself = nil;
     if (_audioController != nil) {
         [_audioController stopPlayer];
     }
-    [_channel invokeMethod:@"onPlayerDrainDataFinish" arguments:sendText];
+    [_channel invokeMethod:@"onPlayerDrainFinish" arguments:sendText];
 }
  
 
@@ -439,7 +439,8 @@ static FlutterAliyunNui *myself = nil;
 }
 
 -(void)onNuiRmsChanged:(float)rms {
-//    TLog(@"onNuiRmsChanged rms=%f", rms);
+//    TLog(@"rmsChangedHandler rms=%f", rms);
+    [_channel invokeMethod:@"onRmsChanged" arguments:@(rms)];
 }
 
 -(void)onNuiLogTrackCallback:(NuiSdkLogLevel)level

@@ -2,14 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_aliyun_nui/flutter_aliyun_nui.dart';
 import 'dart:async';
 
-import 'package:flutter_aliyun_nui/src/permission.dart';
-
-class AliyunConfig {
-  static const appKey = 'K2W2xXRFH90s93gz';
-  static const url = 'wss://nls-gateway-cn-beijing.aliyuncs.com/ws/v1';
-  static const token = 'dbfee80d4a424ccdbd53957e6b60f6cf';
-}
-
 class VoiceRecognitionPage extends StatefulWidget {
   const VoiceRecognitionPage({super.key});
 
@@ -20,7 +12,7 @@ class VoiceRecognitionPage extends StatefulWidget {
 
 class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   String _recognizedText = '';
-
+  List<double> amplitudes = List.generate(7, (_) => 40);
   @override
   void initState() {
     super.initState();
@@ -33,12 +25,12 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     NuiConfig config = NuiConfig(
       appKey: AliyunConfig.appKey,
       deviceId: '660668cf0c874c848fbb467603927ebd',
-      url: AliyunConfig.url,
       token: AliyunConfig.token,
     );
+
     await ALNui.initRecognize(config);
-    ALNui.setRecognizeResultHandler(
-      handlerResult: (result) {
+    ALNui.setMethodCallHandler(
+      recognizeResultHandler: (result) {
         setState(() {
           _recognizedText = result.result;
           if (result.isLast) {
@@ -46,8 +38,18 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
           }
         });
       },
-      handlerError: (error) {
+      errorHandler: (error) {
         debugPrint(error.errorMessage);
+      },
+      rmsChangedHandler: (rms) {
+        var r = rms + 160;
+        // if (r < 100) {
+        //   r = r - 20;
+        // }
+        setState(() {
+          amplitudes.removeAt(0);
+          amplitudes.add(r);
+        });
       },
     );
   }
@@ -67,7 +69,6 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
     NuiConfig config = NuiConfig(
       appKey: AliyunConfig.appKey,
       deviceId: '660668cf0c874c848fbb467603927ebd',
-      url: AliyunConfig.url,
       token: AliyunConfig.token,
       format: 'pcm',
       voice: 'xiaoyun',
@@ -126,6 +127,8 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
         child: Column(
           children: [
             const SizedBox(height: 200),
+            VoiceWave(amplitudes: amplitudes),
+            const SizedBox(height: 40),
             Text(_recognizedText, style: const TextStyle(color: Colors.red)),
             ElevatedButton(onPressed: _initRecognize, child: const Text('Init')),
             ElevatedButton(onPressed: _startRecognition, child: const Text('Start')),
@@ -139,4 +142,119 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
       ),
     );
   }
+}
+
+class VoiceWave extends StatelessWidget {
+  final double waveWidth; // 单个音浪宽度
+  final double waveHeight; // 音浪最大高度
+  final double spacing; // 音浪间距
+  final Color waveColor; // 音浪颜色
+  final Color backgroundColor; // 背景色
+  final Size backgroundSize; // 背景尺寸
+  final EdgeInsets padding; // 内边距
+  final List<double> amplitudes; // 振幅数据(0-1)
+  final double maxAmplitude = 120.0;
+
+  const VoiceWave({
+    Key? key,
+    this.waveWidth = 3.0,
+    this.waveHeight = 30.0,
+    this.spacing = 2.0,
+    this.waveColor = Colors.green,
+    this.backgroundColor = Colors.red,
+    this.backgroundSize = const Size(300, 60),
+    this.padding = EdgeInsets.zero,
+    required this.amplitudes,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: backgroundSize.width,
+      height: backgroundSize.height,
+      padding: padding,
+      color: backgroundColor,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          waveItem(amplitudes),
+          waveItem(amplitudes.reversed.toList()),
+          waveItem(amplitudes),
+          waveItem(amplitudes.reversed.toList()),
+          waveItem(amplitudes),
+          waveItem(amplitudes.reversed.toList()),
+          waveItem(amplitudes),
+          waveItem(amplitudes.reversed.toList()),
+        ],
+      ),
+    );
+  }
+
+  waveItem(List<double> rms) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: rms.map((amplitude) {
+        double l = amplitude > maxAmplitude ? maxAmplitude : amplitude;
+        print(l);
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: spacing / 2),
+          width: waveWidth,
+          height: l / maxAmplitude * waveHeight,
+          decoration: BoxDecoration(
+            color: waveColor,
+            borderRadius: BorderRadius.circular(waveWidth / 2),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _WavePainter extends CustomPainter {
+  final List<double> rmss;
+  final double minRms;
+  final double maxRms;
+  final Color color;
+  final double barWidth;
+  final double barSpace;
+
+  _WavePainter(
+    this.rmss,
+    this.minRms,
+    this.maxRms, {
+    this.color = Colors.blueAccent,
+    double? barWidth,
+    double? barSpace,
+  })  : barWidth = barWidth ?? 4,
+        barSpace = barSpace ?? 1;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final totalWidth = rmss.length * barWidth + (rmss.length - 1) * barSpace;
+    final startX = (size.width - totalWidth) / 2; // 左右居中
+
+    final centerY = size.height / 2;
+
+    for (int i = 0; i < rmss.length; i++) {
+      final barHeight = rmss[i] * (64 / 90);
+      // 让每个bar以画布中心为中轴，上下剧中
+      final top = centerY - barHeight / 2;
+      final bottom = centerY + barHeight / 2;
+      final left = startX + i * (barWidth + barSpace);
+      final rect = Rect.fromLTRB(left, top, left + barWidth, bottom);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(barWidth / 2)),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavePainter oldDelegate) =>
+      oldDelegate.rmss != rmss || oldDelegate.color != color || oldDelegate.barWidth != barWidth || oldDelegate.barSpace != barSpace;
 }
