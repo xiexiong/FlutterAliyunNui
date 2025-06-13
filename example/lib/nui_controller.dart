@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_aliyun_nui/flutter_aliyun_nui.dart';
 import 'dart:async';
+import 'dart:math';
 
 class VoiceRecognitionPage extends StatefulWidget {
   const VoiceRecognitionPage({super.key});
@@ -12,7 +15,7 @@ class VoiceRecognitionPage extends StatefulWidget {
 
 class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
   String _recognizedText = '';
-  List<double> amplitudes = List.generate(7, (_) => 40);
+  List<double> amplitudes = List.generate(32, (_) => 40);
   @override
   void initState() {
     super.initState();
@@ -43,13 +46,24 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
       },
       rmsChangedHandler: (rms) {
         var r = rms + 160;
-        // if (r < 100) {
-        //   r = r - 20;
-        // }
-        setState(() {
-          amplitudes.removeAt(0);
-          amplitudes.add(r);
-        });
+        if (r < 100) {
+          r = 40;
+          amplitudes = List.generate(32, (_) => 40);
+          setState(() {});
+        } else {
+          final random = Random();
+          for (int i = 0; i < amplitudes.length; i++) {
+            amplitudes[i] = (40 + random.nextInt(20)).toDouble();
+            amplitudes[i + 1] = (40 + random.nextInt(20)).toDouble();
+            amplitudes[i + 2] = (40 + random.nextInt(80)).toDouble();
+            amplitudes[i + 3] = (40 + random.nextInt(80)).toDouble();
+            amplitudes[i + 4] = (40 + random.nextInt(80)).toDouble();
+            amplitudes[i + 5] = (40 + random.nextInt(20)).toDouble();
+            i += 5;
+          }
+
+          setState(() {});
+        }
       },
     );
   }
@@ -178,13 +192,6 @@ class VoiceWave extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           waveItem(amplitudes),
-          waveItem(amplitudes.reversed.toList()),
-          waveItem(amplitudes),
-          waveItem(amplitudes.reversed.toList()),
-          waveItem(amplitudes),
-          waveItem(amplitudes.reversed.toList()),
-          waveItem(amplitudes),
-          waveItem(amplitudes.reversed.toList()),
         ],
       ),
     );
@@ -196,14 +203,16 @@ class VoiceWave extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: rms.map((amplitude) {
         double l = amplitude > maxAmplitude ? maxAmplitude : amplitude;
-        print(l);
-        return Container(
-          margin: EdgeInsets.symmetric(horizontal: spacing / 2),
-          width: waveWidth,
-          height: l / maxAmplitude * waveHeight,
-          decoration: BoxDecoration(
-            color: waveColor,
-            borderRadius: BorderRadius.circular(waveWidth / 2),
+        return AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          child: Container(
+            margin: EdgeInsets.symmetric(horizontal: spacing / 2),
+            width: waveWidth,
+            height: l / maxAmplitude * waveHeight,
+            decoration: BoxDecoration(
+              color: waveColor,
+              borderRadius: BorderRadius.circular(waveWidth / 2),
+            ),
           ),
         );
       }).toList(),

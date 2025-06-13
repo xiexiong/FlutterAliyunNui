@@ -77,14 +77,11 @@ public class SpeechRecognizer implements INativeNuiCallback {
                 break;
             case "startRecognize":
                 startRecognize(params, result);
-                result.success(null);
                 break;
             case "stopRecognize":
                 stopRecognize(result);
-                result.success(null);
                 break;
             case "release":
-                release(result);
                 result.success(null); 
                 break;
             default:
@@ -107,7 +104,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
         JSONObject json = new JSONObject(params); 
 
         int ret = nui_instance.initialize(this, genInitParams("", mDebugPath, json),
-                Constants.LogLevel.LOG_LEVEL_DEBUG, true);
+                Constants.LogLevel.LOG_LEVEL_ERROR, true);
         Log.i(TAG, "NUI init result = " + ret);
         if (ret == Constants.NuiResultCode.SUCCESS) {
             mInit = true;

@@ -1,6 +1,6 @@
 class AliyunConfig {
   static const appKey = 'K2W2xXRFH90s93gz';
-  static const token = '9e01975b11e84ff9a6e3c7aa037ca27c';
+  static const token = 'cf1a86ea13f94d42a8b11b62fc9c973e';
 }
 
 class NuiConfig {
