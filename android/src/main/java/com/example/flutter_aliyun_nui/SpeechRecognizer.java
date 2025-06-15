@@ -82,6 +82,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
                 stopRecognize(result);
                 break;
             case "release":
+                release(result);
                 result.success(null); 
                 break;
             default:
@@ -112,7 +113,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
             Log.i(TAG, "NUI init success");
         } else {
             Log.e(TAG, "NUI init failed: " + ret);
-            result.error("NUI_INIT_FAILED", "NUI initialization failed with code: " + ret, null);
+            result.success("-1");
         }
     }
 
@@ -143,7 +144,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
             }
         } else {
             Log.e(TAG, "donnot get RECORD_AUDIO permission!");
-            result.error("PERMISSION_DENIED", "No RECORD_AUDIO permission", null);
+            result.success("-1");
             return;
         }
 
@@ -157,9 +158,12 @@ public class SpeechRecognizer implements INativeNuiCallback {
             if (ret != 0) {
                 final String msg_text = Utils.getMsgWithErrorCode(ret, "start");
                 Log.e(TAG, "startDialog failed: " + msg_text);
+                result.success("-1");
             }
-        });
-        result.success(null);
+            else {
+                result.success("0");
+            }
+        }); 
     }
 
     /**
@@ -288,7 +292,11 @@ public class SpeechRecognizer implements INativeNuiCallback {
         } else if (event == Constants.NuiEvent.EVENT_ASR_ERROR) {
             final String msg_text = Utils.getMsgWithErrorCode(resultCode, "start");
             mStopping = false;
-            Log.e(TAG, "EVENT_ASR_ERROR: " + msg_text);
+            Log.e(TAG, "EVENT_ASR_ERROR: " + msg_text); 
+            Map<String, Object> arguments = new HashMap<>();
+            arguments.put("errorCode", 1);
+            arguments.put("errorMessage", msg_text);
+            mainHandler.post(() -> channel.invokeMethod("onError", arguments));
         } else if (event == Constants.NuiEvent.EVENT_MIC_ERROR) {
             final String msg_text = Utils.getMsgWithErrorCode(resultCode, "start");
             mStopping = false;
@@ -314,7 +322,22 @@ public class SpeechRecognizer implements INativeNuiCallback {
         Log.i(TAG, "onNuiAudioStateChanged: " + state);
         try {
             if (state == Constants.AudioState.STATE_OPEN) {
-                if (mAudioRecorder != null) mAudioRecorder.startRecording();
+                if (mAudioRecorder == null || mAudioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
+                    // 重新初始化
+                    mAudioRecorder = new AudioRecord(
+                            MediaRecorder.AudioSource.DEFAULT,
+                            SAMPLE_RATE,
+                            AudioFormat.CHANNEL_IN_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT,
+                            WAVE_FRAM_SIZE * 4
+                    );
+                    Log.i(TAG, "AudioRecorder re-initialized in onNuiAudioStateChanged");
+                }
+                if (mAudioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
+                    mAudioRecorder.startRecording();
+                } else {
+                    Log.e(TAG, "AudioRecord still not initialized, cannot startRecording!");
+                }
             } else if (state == Constants.AudioState.STATE_CLOSE || state == Constants.AudioState.STATE_PAUSE) {
                 if (mAudioRecorder != null) {
                     if (state == Constants.AudioState.STATE_PAUSE) mAudioRecorder.stop();

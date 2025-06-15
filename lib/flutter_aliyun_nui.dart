@@ -55,11 +55,13 @@ class ALNui {
           case 'onError':
             debugPrint('NBSDK ======> onError');
             debugPrint(call.arguments.toString());
+            slog?.call('NBSDK ======> onError:${call.arguments.toString()}');
             final error = NuiError.fromMap(call.arguments);
             // 240068 token 无效/过期 清空 token 重新启动
             if (error.errorCode == 240068) {
               recognizeOnReady = false;
             }
+
             errorHandler?.call(error);
             break;
           case 'onToast':
@@ -77,6 +79,7 @@ class ALNui {
     slog?.call('NBSDK ======> initRecognize');
     var initResult = await _channel.invokeMethod('initRecognize', config.toRecognizeJson());
     recognizeOnReady = initResult == '0';
+    slog?.call('NBSDK ======> initRecognize initResult:$initResult, is $recognizeOnReady');
   }
 
   static Future<void> startRecognize(String token) async {
