@@ -17,8 +17,7 @@ A new Flutter plugin project.
   s.dependency 'AliyunIOSNuiSDK'
   s.source_files = 'Classes/**/*'
   s.pod_target_xcconfig = { 
-    'DEFINES_MODULE' => 'YES', 
-    # 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64 x86_64',
+    'DEFINES_MODULE' => 'YES',
   }
   s.resource_bundles = {'flutter_aliyun_nui_privacy' => ['Resources/PrivacyInfo.xcprivacy']}
 end

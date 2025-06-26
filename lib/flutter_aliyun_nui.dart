@@ -1,10 +1,11 @@
-// lib/flutter_aliyun_nui.dart
 library flutter_aliyun_nui;
 
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_aliyun_nui/flutter_aliyun_nui.dart';
+import 'package:flutter_aliyun_nui/method_channel_ext.dart';
 
 export 'src/nui_config.dart';
 export 'src/nui_event.dart';
@@ -19,6 +20,11 @@ class ALNui {
     slog = slongFunction;
   }
 
+  static void log(String method, [dynamic args]) {
+    debugPrint('NBSDK ======> $method:${args.toString()}');
+    slog?.call('NBSDK ======> $method:${args.toString()}}');
+  }
+
   static void setMethodCallHandler({
     Function(NuiRecognizeResult)? recognizeResultHandler,
     Function? playerDrainFinishHandler,
@@ -26,36 +32,31 @@ class ALNui {
     Function(NuiError)? errorHandler,
     Function(String)? toastHandler,
   }) {
+    if (isSimulator) {
+      return;
+    }
     _channel.setMethodCallHandler((call) async {
       try {
         switch (call.method) {
           case 'onRecognizeResult':
-            debugPrint('NBSDK ======> onRecognizeResult');
-            if (slog != null) {
-              slog?.call('onRecognizeResult: ${call.arguments.toString()}');
-            }
+            log('onRecognizeResult', call.arguments);
+
             if (!recognizeOnReady) {
               debugPrint('NBSDK ======> recognize not ready');
               return;
             }
-
-            debugPrint('阿里云识别结果:${call.arguments.toString()}');
             recognizeResultHandler?.call((NuiRecognizeResult.fromMap(call.arguments)));
             break;
           case 'onPlayerDrainFinish':
             playerDrainFinishHandler?.call();
-            debugPrint('NBSDK ======> playerDrainFinishHandler');
-            slog?.call('NBSDK ======> playerDrainFinishHandler');
             List data = call.arguments ?? [];
-            debugPrint('阿里云播放数据:${data.join('')}');
+            log('playerDrainFinishHandler', data.join(''));
             break;
           case 'onRmsChanged':
             rmsChangedHandler?.call(call.arguments);
             break;
           case 'onError':
-            debugPrint('NBSDK ======> onError');
-            debugPrint(call.arguments.toString());
-            slog?.call('NBSDK ======> onError:${call.arguments.toString()}');
+            log('onError', call.arguments);
             final error = NuiError.fromMap(call.arguments);
             // 240068 token 无效/过期 清空 token 重新启动
             if (error.errorCode == 240068) {
@@ -65,8 +66,7 @@ class ALNui {
             errorHandler?.call(error);
             break;
           case 'onToast':
-            debugPrint('NBSDK ======> onToast');
-            slog?.call('NBSDK ======> onToast: ${call.arguments.toString()}');
+            log('onToast', call.arguments);
             break;
         }
       } catch (e) {
@@ -76,79 +76,71 @@ class ALNui {
   }
 
   static Future<void> initRecognize(NuiConfig config) async {
-    slog?.call('NBSDK ======> initRecognize');
-    var initResult = await _channel.invokeMethod('initRecognize', config.toRecognizeJson());
+    var initResult = await _channel.invoke('initRecognize', config.toRecognizeJson());
     recognizeOnReady = initResult == '0';
     slog?.call('NBSDK ======> initRecognize initResult:$initResult, is $recognizeOnReady');
   }
 
   static Future<void> startRecognize(String token) async {
-    slog?.call('NBSDK ======> startRecognize');
-    await _channel.invokeMethod('startRecognize', {'token': token});
+    await _channel.invoke('startRecognize', {'token': token});
   }
 
   static Future<void> stopRecognize() async {
-    slog?.call('NBSDK ======> stopRecognize');
-    await _channel.invokeMethod('stopRecognize');
+    await _channel.invoke('stopRecognize');
   }
 
   static Future<void> startStreamInputTts(NuiConfig config, {bool retry = false}) async {
     try {
-      slog?.call('NBSDK ======> startStreamInputTts');
-      debugPrint('NBSDK ======> startStreamInputTts ');
-      debugPrint(config.toStreamTtsJson().toString());
-      var ret = await _channel.invokeMethod('startStreamInputTts', config.toStreamTtsJson());
+      var ret = await _channel.invoke('startStreamInputTts', config.toStreamTtsJson());
       ttsOnReady = ret == 0;
     } catch (e) {
-      debugPrint('NBSDK ======> startStreamInputTts error: $e');
-      slog?.call('NBSDK ======> startStreamInputTts error: $e');
+      log('startStreamInputTts', e);
     }
   }
 
   static Future<void> sendStreamInputTts(String text) async {
-    debugPrint('NBSDK ======> sendStreamInputTts $text');
-    slog?.call('NBSDK ======> sendStreamInputTts $text');
     if (!ttsOnReady) {
       debugPrint('NBSDK ======> tts not ready');
       return;
     }
-    await _channel.invokeMethod('sendStreamInputTts', {'text': text});
+    await _channel.invoke('sendStreamInputTts', {'text': text});
   }
 
   static Future<void> stopStreamInputTts() async {
-    debugPrint('NBSDK ======> stopStreamInputTts');
-    slog?.call('NBSDK ======> stopStreamInputTts');
     if (!ttsOnReady) {
       debugPrint('NBSDK ======> tts not ready');
       return;
     }
-    await _channel.invokeMethod('stopStreamInputTts');
+    await _channel.invoke('stopStreamInputTts');
     ttsOnReady = false;
   }
 
   static Future<void> cancelStreamInputTts() async {
-    debugPrint('NBSDK ======> cancelStreamInputTts');
-    slog?.call('NBSDK ======> cancelStreamInputTts');
-    await _channel.invokeMethod('cancelStreamInputTts');
+    await _channel.invoke('cancelStreamInputTts');
     ttsOnReady = false;
   }
 
   static Future<bool> isPlaying() async {
-    return await _channel.invokeMethod('isPlaying');
+    return await _channel.invoke('isPlaying');
   }
 
   static Future<bool> isPaused() async {
-    return await _channel.invokeMethod('isPaused');
+    return await _channel.invoke('isPaused');
   }
 
   static Future<bool> isStopped() async {
-    return await _channel.invokeMethod('isStopped');
+    return await _channel.invoke('isStopped');
   }
 
   static Future<void> release() async {
-    debugPrint('NBSDK ======> release');
     recognizeOnReady = false;
     ttsOnReady = false;
-    await _channel.invokeMethod('release');
+    await _channel.invoke('release');
+  }
+
+  static bool get isSimulator {
+    if (!Platform.isIOS) return false;
+    // iOS 模拟器的设备型号一般以 "x86_64" 或 "arm64" 开头
+    return !Platform.isMacOS && (Platform.environment['SIMULATOR_DEVICE_NAME'] != null);
   }
 }
