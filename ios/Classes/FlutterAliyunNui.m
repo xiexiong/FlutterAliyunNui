@@ -76,7 +76,7 @@ static FlutterAliyunNui *myself = nil;
 
     NSString * parameters = [self genParams];
     [self.nui nui_set_params:[parameters UTF8String]];
-    return  errorShow;
+    return @((int)retCode);
 }
 
 // 开始语音识别

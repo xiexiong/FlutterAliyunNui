@@ -201,7 +201,6 @@ class _VoiceRecognitionPageState extends State<VoiceRecognitionPage> {
                           )
                         : VoiceWave(
                             amplitudes: _amplitudes,
-                            stopped: _stopped,
                             backgroundColor: _willCancel ? Colors.red : const Color(0xff3D57F8),
                           ),
                   ),
@@ -243,7 +242,6 @@ class VoiceWave extends StatelessWidget {
   final Color backgroundColor;
   final Size backgroundSize;
   final EdgeInsets padding;
-  final bool stopped;
 
   const VoiceWave({
     super.key,
@@ -255,7 +253,6 @@ class VoiceWave extends StatelessWidget {
     this.backgroundColor = const Color(0xff3D57F8),
     this.backgroundSize = const Size(double.infinity, double.infinity),
     this.padding = EdgeInsets.zero,
-    this.stopped = false,
   });
 
   @override
@@ -273,10 +270,7 @@ class VoiceWave extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: List.generate(amplitudes.length, (index) {
-            double h = 7;
-            if (!stopped) {
-              h = amplitudes[index] * waveHeight.clamp(7.0, waveHeight);
-            }
+            var h = amplitudes[index] * waveHeight.clamp(7.0, waveHeight);
             return AnimatedContainer(
               duration: const Duration(milliseconds: 120),
               margin: EdgeInsets.symmetric(horizontal: spacing / 2),

@@ -77,7 +77,7 @@ class ALNui {
 
   static Future<void> initRecognize(NuiConfig config) async {
     var initResult = await _channel.invoke('initRecognize', config.toRecognizeJson());
-    recognizeOnReady = initResult == '0';
+    recognizeOnReady = [0, 240012].contains(initResult); // 0 表示成功，240012 表示已初始化
     slog?.call('NBSDK ======> initRecognize initResult:$initResult, is $recognizeOnReady');
   }
 
