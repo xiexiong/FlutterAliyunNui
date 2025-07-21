@@ -100,7 +100,7 @@ class ALNui {
 
   static Future<void> sendStreamInputTts(String text) async {
     if (!ttsOnReady) {
-      debugPrint('NBSDK ======> tts not ready');
+      debugPrint('NBSDK ======>send fialed, tts not ready');
       return;
     }
     await _channel.invoke('sendStreamInputTts', {'text': text});
@@ -108,7 +108,7 @@ class ALNui {
 
   static Future<void> stopStreamInputTts() async {
     if (!ttsOnReady) {
-      debugPrint('NBSDK ======> tts not ready');
+      debugPrint('NBSDK ======>stop failed, tts not ready');
       return;
     }
     await _channel.invoke('stopStreamInputTts');

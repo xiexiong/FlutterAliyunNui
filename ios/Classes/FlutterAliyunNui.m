@@ -207,8 +207,6 @@ static FlutterAliyunNui *myself = nil;
         if (line_num > 1) {
             updatedText = [[lines subarrayWithRange:NSMakeRange(1, [lines count] - 1)] componentsJoinedByString:@"\n"];
         }
-       
-        NSLog(@"发送内容：%@", inputContents);
     }
 }
 // 停止播放
