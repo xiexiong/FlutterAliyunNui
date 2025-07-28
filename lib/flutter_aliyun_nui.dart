@@ -93,6 +93,7 @@ class ALNui {
     try {
       var ret = await _channel.invoke('startStreamInputTts', config.toStreamTtsJson());
       ttsOnReady = ret == 0;
+      log('startStreamInputTts is $ttsOnReady');
     } catch (e) {
       log('startStreamInputTts', e);
     }
