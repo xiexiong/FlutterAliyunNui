@@ -22,11 +22,9 @@ import com.alibaba.idst.nui.INativeNuiCallback;
 import com.alibaba.idst.nui.KwsResult;
 import com.alibaba.idst.nui.NativeNui;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -41,29 +39,28 @@ import io.flutter.plugin.common.MethodChannel;
  */
 public class SpeechRecognizer implements INativeNuiCallback {
     private static final String TAG = "SpeechRecognizer";
+    private static final int SAMPLE_RATE = 16000;
+    private static final int WAVE_FRAME_SIZE = 20 * 2 * 1 * SAMPLE_RATE / 1000; // 20ms audio for 16k/16bit/mono
 
     private final MethodChannel channel;
     private final Context context;
-
-    private final NativeNui nui_instance = new NativeNui();
-    private final static int SAMPLE_RATE = 16000;
-    private final static int WAVE_FRAM_SIZE = 20 * 2 * 1 * SAMPLE_RATE / 1000; // 20ms audio for 16k/16bit/mono
-    private AudioRecord mAudioRecorder = null;
-
-    private boolean mInit = false;
-    private boolean mStopping = false;
-    private String mDebugPath = "";
-    private String curTaskId = "";
-    private final LinkedBlockingQueue<byte[]> tmpAudioQueue = new LinkedBlockingQueue<>();
-    private String mRecordingAudioFilePath = "";
-    private OutputStream mRecordingAudioFile = null;
-    private Handler mHandler;
+    private final NativeNui nuiInstance = new NativeNui();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final String[] permissions = {Manifest.permission.RECORD_AUDIO};
 
+    private AudioRecord audioRecorder = null;
+    private Handler handler;
+    private boolean isInit = false;
+    private boolean isStopping = false;
+    private String debugPath = "";
+    private String curTaskId = "";
+    private final LinkedBlockingQueue<byte[]> tmpAudioQueue = new LinkedBlockingQueue<>();
+    private String recordingAudioFilePath = "";
+    private OutputStream recordingAudioFile = null;
+
     public SpeechRecognizer(Context context, MethodChannel channel) {
         this.context = context;
-        this.channel = channel; 
+        this.channel = channel;
     }
 
     /**
@@ -83,7 +80,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
                 break;
             case "release":
                 release(result);
-                result.success(null); 
+                result.success(null);
                 break;
             default:
                 result.notImplemented();
@@ -94,21 +91,20 @@ public class SpeechRecognizer implements INativeNuiCallback {
      * 初始化 SDK
      */
     private void initNui(Map<String, Object> params, MethodChannel.Result result) {
-        if (mHandler == null) {
+        if (handler == null) {
             HandlerThread handlerThread = new HandlerThread("process_thread");
             handlerThread.start();
-            mHandler = new Handler(handlerThread.getLooper());
-
-            mDebugPath = context.getExternalCacheDir().getAbsolutePath() + "/debug";
-            Utils.createDir(mDebugPath);
+            handler = new Handler(handlerThread.getLooper());
+            debugPath = context.getExternalCacheDir().getAbsolutePath() + "/debug";
+            Utils.createDir(debugPath);
         }
-        JSONObject json = new JSONObject(params); 
+        JSONObject json = new JSONObject(params);
 
-        int ret = nui_instance.initialize(this, genInitParams("", mDebugPath, json),
+        int ret = nuiInstance.initialize(this, genInitParams(debugPath, json),
                 Constants.LogLevel.LOG_LEVEL_ERROR, true);
         Log.i(TAG, "NUI init result = " + ret);
-        if (ret == Constants.NuiResultCode.SUCCESS) {
-            mInit = true;
+        isInit = (ret == Constants.NuiResultCode.SUCCESS);
+        if (isInit) {
             Log.i(TAG, "NUI init success");
         } else {
             Log.e(TAG, "NUI init failed: " + ret);
@@ -121,7 +117,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
      */
     private void startRecognize(Map<String, Object> params, MethodChannel.Result result) {
         JSONObject json = new JSONObject(params);
-        Log.i(TAG, "startRecognize json = " + json.toString());
+        Log.i(TAG, "startRecognize json = " + json);
 
         // 动态权限申请
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -131,12 +127,12 @@ public class SpeechRecognizer implements INativeNuiCallback {
             }
         }
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            if (mAudioRecorder == null) {
-                mAudioRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
+            if (audioRecorder == null) {
+                audioRecorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
                         SAMPLE_RATE,
                         AudioFormat.CHANNEL_IN_MONO,
                         AudioFormat.ENCODING_PCM_16BIT,
-                        WAVE_FRAM_SIZE * 4);
+                        WAVE_FRAME_SIZE * 4);
                 Log.d(TAG, "AudioRecorder new ...");
             } else {
                 Log.w(TAG, "AudioRecord has been new ...");
@@ -147,31 +143,30 @@ public class SpeechRecognizer implements INativeNuiCallback {
             return;
         }
 
-        mHandler.post(() -> {
+        handler.post(() -> {
             String setParamsString = genParams();
             Log.i(TAG, "nui set params " + setParamsString);
-            nui_instance.setParams(setParamsString);
-            int ret = nui_instance.startDialog(Constants.VadMode.TYPE_P2T,
+            nuiInstance.setParams(setParamsString);
+            int ret = nuiInstance.startDialog(Constants.VadMode.TYPE_P2T,
                     genDialogParams(json.getString("token")));
             Log.i(TAG, "start done with " + ret);
             if (ret != 0) {
-                final String msg_text = Utils.getMsgWithErrorCode(ret, "start");
-                Log.e(TAG, "startDialog failed: " + msg_text);
+                final String msgText = Utils.getMsgWithErrorCode(ret, "start");
+                Log.e(TAG, "startDialog failed: " + msgText);
                 result.success("-1");
-            }
-            else {
+            } else {
                 result.success("0");
             }
-        }); 
+        });
     }
 
     /**
      * 停止识别
      */
     private void stopRecognize(MethodChannel.Result result) {
-        mHandler.post(() -> {
-            mStopping = true;
-            long ret = nui_instance.stopDialog();
+        handler.post(() -> {
+            isStopping = true;
+            long ret = nuiInstance.stopDialog();
             Log.i(TAG, "cancel dialog " + ret + " end");
         });
         result.success(null);
@@ -181,7 +176,7 @@ public class SpeechRecognizer implements INativeNuiCallback {
      * 释放资源
      */
     private void release(MethodChannel.Result result) {
-        nui_instance.release();
+        nuiInstance.release();
         result.success(null);
     }
 
@@ -190,15 +185,15 @@ public class SpeechRecognizer implements INativeNuiCallback {
      */
     private String genParams() {
         try {
-            JSONObject nls_config = new JSONObject();
-            nls_config.put("enable_intermediate_result", true);
-            nls_config.put("enable_punctuation_prediction", true);
-            nls_config.put("sample_rate", SAMPLE_RATE);
-            nls_config.put("sr_format", "pcm");
-            nls_config.put("enable_voice_detection", false);
+            JSONObject nlsConfig = new JSONObject();
+            nlsConfig.put("enable_intermediate_result", true);
+            nlsConfig.put("enable_punctuation_prediction", true);
+            nlsConfig.put("sample_rate", SAMPLE_RATE);
+            nlsConfig.put("sr_format", "pcm");
+            nlsConfig.put("enable_voice_detection", false);
 
             JSONObject parameters = new JSONObject();
-            parameters.put("nls_config", nls_config);
+            parameters.put("nls_config", nlsConfig);
             parameters.put("service_type", Constants.kServiceTypeASR);
             return parameters.toString();
         } catch (JSONException e) {
@@ -210,17 +205,17 @@ public class SpeechRecognizer implements INativeNuiCallback {
     /**
      * 生成初始化参数
      */
-    private String genInitParams(String workpath, String debugpath, JSONObject json) {
-        String g_appkey = json.getString("app_key");
-        String g_token = json.getString("token");
-        String device_id = json.getString("device_id");
+    private String genInitParams(String debugPath, JSONObject json) {
+        String gAppKey = json.getString("app_key");
+        String gToken = json.getString("token");
+        String deviceId = json.getString("device_id");
         String url = json.getString("url");
         try {
             Auth.GetTicketMethod method = Auth.GetTicketMethod.GET_TOKEN_FROM_SERVER_FOR_ONLINE_FEATURES;
-            if (!g_appkey.isEmpty()) Auth.setAppKey(g_appkey);
-            if (!g_token.isEmpty()) Auth.setToken(g_token);
+            if (!gAppKey.isEmpty()) Auth.setAppKey(gAppKey);
+            if (!gToken.isEmpty()) Auth.setToken(gToken);
 
-            if (!g_appkey.isEmpty() && !g_token.isEmpty()) {
+            if (!gAppKey.isEmpty() && !gToken.isEmpty()) {
                 method = Auth.GetTicketMethod.GET_TOKEN_IN_CLIENT_FOR_ONLINE_FEATURES;
             }
             Log.i(TAG, "Use method:" + method);
@@ -228,10 +223,10 @@ public class SpeechRecognizer implements INativeNuiCallback {
             if (!object.containsKey("token")) {
                 Log.e(TAG, "Cannot get token !!!");
             }
-            object.put("device_id", device_id);
+            object.put("device_id", deviceId);
             object.put("url", url);
             object.put("save_wav", "true");
-            object.put("debug_path", debugpath);
+            object.put("debug_path", debugPath);
             object.put("log_track_level", String.valueOf(Constants.LogLevel.toInt(Constants.LogLevel.LOG_LEVEL_INFO)));
             object.put("service_mode", Constants.ModeAsrCloud);
             return object.toString();
@@ -246,11 +241,11 @@ public class SpeechRecognizer implements INativeNuiCallback {
      */
     private String genDialogParams(String token) {
         try {
-            JSONObject dialog_param = new JSONObject();
-            long distance_expire_time_5m = 300;
-            dialog_param = Auth.refreshTokenIfNeed(dialog_param, distance_expire_time_5m);
-            dialog_param.put("token", token);
-            return dialog_param.toString();
+            JSONObject dialogParam = new JSONObject();
+            long distanceExpireTime5m = 300;
+            dialogParam = Auth.refreshTokenIfNeed(dialogParam, distanceExpireTime5m);
+            dialogParam.put("token", token);
+            return dialogParam.toString();
         } catch (JSONException e) {
             e.printStackTrace();
             return "";
@@ -265,55 +260,62 @@ public class SpeechRecognizer implements INativeNuiCallback {
                                    AsrResult asrResult) {
         Log.i(TAG, "event=" + event + " resultCode=" + resultCode);
 
-        if (event == Constants.NuiEvent.EVENT_ASR_STARTED) {
-            JSONObject jsonObject = JSON.parseObject(asrResult.allResponse);
-            JSONObject header = jsonObject.getJSONObject("header");
-            curTaskId = header.getString("task_id");
-        } else if (event == Constants.NuiEvent.EVENT_ASR_RESULT) {
-            mStopping = false;
-            JSONObject jsonObject = JSON.parseObject(asrResult.asrResult);
-            JSONObject payload = jsonObject.getJSONObject("payload");
-            String result = payload.getString("result");
-            Log.i(TAG, "EVENT_ASR_RESULT " + result);
-            Map<String, Object> arguments = new HashMap<>();
-            arguments.put("result", result);
-            arguments.put("isLast", 1);
-            mainHandler.post(() -> channel.invokeMethod("onRecognizeResult", arguments));
-        } else if (event == Constants.NuiEvent.EVENT_ASR_PARTIAL_RESULT) {
-            JSONObject jsonObject = JSON.parseObject(asrResult.asrResult);
-            JSONObject payload = jsonObject.getJSONObject("payload");
-            String result = payload.getString("result");
-            Log.i(TAG, "EVENT_ASR_PARTIAL_RESULT " + result);
-            Map<String, Object> arguments = new HashMap<>();
-            arguments.put("result", result);
-            arguments.put("isLast", 0);
-            mainHandler.post(() -> channel.invokeMethod("onRecognizeResult", arguments));
-        } else if (event == Constants.NuiEvent.EVENT_ASR_ERROR) {
-            final String msg_text = Utils.getMsgWithErrorCode(resultCode, "start");
-            mStopping = false;
-            Log.e(TAG, "EVENT_ASR_ERROR: " + msg_text); 
-            Map<String, Object> arguments = new HashMap<>();
-            arguments.put("errorCode", 1);
-            arguments.put("errorMessage", msg_text);
-            mainHandler.post(() -> channel.invokeMethod("onError", arguments));
-        } else if (event == Constants.NuiEvent.EVENT_MIC_ERROR) {
-            final String msg_text = Utils.getMsgWithErrorCode(resultCode, "start");
-            mStopping = false;
-            Log.e(TAG, "EVENT_MIC_ERROR: " + msg_text);
-        } else if (event == Constants.NuiEvent.EVENT_DIALOG_EX) {
-            Log.i(TAG, "dialog extra message = " + asrResult.asrResult);
+        switch (event) {
+            case EVENT_ASR_STARTED:
+                JSONObject jsonObject = JSON.parseObject(asrResult.allResponse);
+                JSONObject header = jsonObject.getJSONObject("header");
+                curTaskId = header.getString("task_id");
+                break;
+            case EVENT_ASR_RESULT:
+                isStopping = false;
+                JSONObject resultObj = JSON.parseObject(asrResult.asrResult);
+                JSONObject payload = resultObj.getJSONObject("payload");
+                String result = payload.getString("result");
+                Log.i(TAG, "EVENT_ASR_RESULT " + result);
+                Map<String, Object> arguments = new HashMap<>();
+                arguments.put("result", result);
+                arguments.put("isLast", 1);
+                mainHandler.post(() -> channel.invokeMethod("onRecognizeResult", arguments));
+                break;
+            case EVENT_ASR_PARTIAL_RESULT:
+                JSONObject partialObj = JSON.parseObject(asrResult.asrResult);
+                JSONObject partialPayload = partialObj.getJSONObject("payload");
+                String partialResult = partialPayload.getString("result");
+                Log.i(TAG, "EVENT_ASR_PARTIAL_RESULT " + partialResult);
+                Map<String, Object> partialArguments = new HashMap<>();
+                partialArguments.put("result", partialResult);
+                partialArguments.put("isLast", 0);
+                mainHandler.post(() -> channel.invokeMethod("onRecognizeResult", partialArguments));
+                break;
+            case EVENT_ASR_ERROR:
+                final String msgText = Utils.getMsgWithErrorCode(resultCode, "start");
+                isStopping = false;
+                Log.e(TAG, "EVENT_ASR_ERROR: " + msgText);
+                Map<String, Object> errorArguments = new HashMap<>();
+                errorArguments.put("errorCode", 1);
+                errorArguments.put("errorMessage", msgText);
+                mainHandler.post(() -> channel.invokeMethod("onError", errorArguments));
+                break;
+            case EVENT_MIC_ERROR:
+                final String micMsgText = Utils.getMsgWithErrorCode(resultCode, "start");
+                isStopping = false;
+                Log.e(TAG, "EVENT_MIC_ERROR: " + micMsgText);
+                break;
+            case EVENT_DIALOG_EX:
+                Log.i(TAG, "dialog extra message = " + asrResult.asrResult);
+                break;
+            default:
+                break;
         }
     }
 
     @Override
     public int onNuiNeedAudioData(byte[] buffer, int len) {
-        if (mAudioRecorder == null || mAudioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
+        if (audioRecorder == null || audioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
             Log.e(TAG, "audio recorder not init");
             return -1;
         }
-        int audio_size = mAudioRecorder.read(buffer, 0, len);
-        // 可选：音频数据存储到本地
-        return audio_size;
+        return audioRecorder.read(buffer, 0, len);
     }
 
     @Override
@@ -321,31 +323,30 @@ public class SpeechRecognizer implements INativeNuiCallback {
         Log.i(TAG, "onNuiAudioStateChanged: " + state);
         try {
             if (state == Constants.AudioState.STATE_OPEN) {
-                if (mAudioRecorder == null || mAudioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
-                    // 重新初始化
-                    mAudioRecorder = new AudioRecord(
+                if (audioRecorder == null || audioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
+                    audioRecorder = new AudioRecord(
                             MediaRecorder.AudioSource.DEFAULT,
                             SAMPLE_RATE,
                             AudioFormat.CHANNEL_IN_MONO,
                             AudioFormat.ENCODING_PCM_16BIT,
-                            WAVE_FRAM_SIZE * 4
+                            WAVE_FRAME_SIZE * 4
                     );
                     Log.i(TAG, "AudioRecorder re-initialized in onNuiAudioStateChanged");
                 }
-                if (mAudioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
-                    mAudioRecorder.startRecording();
+                if (audioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
+                    audioRecorder.startRecording();
                 } else {
                     Log.e(TAG, "AudioRecord still not initialized, cannot startRecording!");
                 }
             } else if (state == Constants.AudioState.STATE_CLOSE || state == Constants.AudioState.STATE_PAUSE) {
-                if (mAudioRecorder != null) {
-                    if (state == Constants.AudioState.STATE_PAUSE) mAudioRecorder.stop();
-                    else mAudioRecorder.release();
+                if (audioRecorder != null) {
+                    if (state == Constants.AudioState.STATE_PAUSE) audioRecorder.stop();
+                    else audioRecorder.release();
                 }
-                if (mRecordingAudioFile != null) {
-                    mRecordingAudioFile.close();
-                    mRecordingAudioFile = null;
-                    Log.i(TAG, "存储录音音频到 " + mRecordingAudioFilePath);
+                if (recordingAudioFile != null) {
+                    recordingAudioFile.close();
+                    recordingAudioFile = null;
+                    Log.i(TAG, "存储录音音频到 " + recordingAudioFilePath);
                 }
             }
         } catch (IOException e) {
